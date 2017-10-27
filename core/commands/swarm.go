@@ -8,17 +8,20 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	cmds "github.com/ipfs/go-ipfs/commands"
 	repo "github.com/ipfs/go-ipfs/repo"
 	config "github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+
 	pstore "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
+	mafilter "gx/ipfs/QmSMZwvs3n4GBikZ7hKzT17c3bk65FmyZo2JqtJ16swqCv/multiaddr-filter"
+	connmgr "gx/ipfs/QmUbUNq1Q6eE2LXqKzKW8BW1SUMqscAj9A3ot9j5suuaRb/go-libp2p-connmgr"
+	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
+	ifconnmgr "gx/ipfs/QmYkCrTwivapqdB3JbwvwvxymseahVkcm46ThRMAA24zCr/go-libp2p-interface-connmgr"
 	swarm "gx/ipfs/QmdQFrFnPrKRQtpeHKjZ3cVNwxmGKKS2TvhJTuN9C9yduh/go-libp2p-swarm"
 	iaddr "gx/ipfs/QmeS8cCKawUwejVrsBtmC1toTXmwVWZGiRJqzgTURVWeF9/go-ipfs-addr"
-
-	mafilter "gx/ipfs/QmSMZwvs3n4GBikZ7hKzT17c3bk65FmyZo2JqtJ16swqCv/multiaddr-filter"
-	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 )
 
 type stringList struct {
@@ -44,6 +47,7 @@ ipfs peers in the internet.
 		"disconnect": swarmDisconnectCmd,
 		"filters":    swarmFiltersCmd,
 		"peers":      swarmPeersCmd,
+		"connmgr":    swarmConnMgrCmd,
 	},
 }
 
@@ -811,4 +815,84 @@ func filtersRemove(r repo.Repo, cfg *config.Config, toRemoveFilters []string) ([
 	}
 
 	return removed, nil
+}
+
+var swarmConnMgrCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Interact with the Connection Manager.",
+		ShortDescription: `
+Display information about the current state of the connection manager.
+`,
+	},
+	Run: func(req cmds.Request, res cmds.Response) {
+		n, err := req.InvocContext().GetNode()
+		if err != nil {
+			res.SetError(err, cmds.ErrNormal)
+			return
+		}
+
+		if n.PeerHost == nil {
+			res.SetError(errNotOnline, cmds.ErrClient)
+			return
+		}
+
+		infos := make(map[string]interface{})
+		cmgr := n.PeerHost.ConnManager()
+		switch cmgr := cmgr.(type) {
+		case nil:
+			infos["type"] = "<nil>"
+		case *ifconnmgr.NullConnMgr:
+			infos["type"] = "disabled"
+		case *connmgr.BasicConnMgr:
+			infos["type"] = "basic"
+
+			inf := cmgr.GetInfo()
+			infos["lowWater"] = inf.LowWater
+			infos["highWater"] = inf.HighWater
+			infos["lastTrim"] = inf.LastTrim
+			infos["gracePeriod"] = inf.GracePeriod.String()
+			infos["connCount"] = inf.ConnCount
+		default:
+			infos["type"] = "unknown"
+		}
+
+		res.SetOutput(infos)
+	},
+	Marshalers: cmds.MarshalerMap{
+		cmds.Text: func(res cmds.Response) (io.Reader, error) {
+			infosp, ok := res.Output().(*map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("expected output type to be a map: %#v", res.Output())
+			}
+			infos := *infosp
+
+			buf := new(bytes.Buffer)
+
+			switch infos["type"] {
+			case "basic":
+				tstr := "<n/a>"
+				t, err := time.Parse(time.RFC3339Nano, infos["lastTrim"].(string))
+				if err != nil {
+					tstr = "<err>"
+				} else if !t.IsZero() {
+					tstr = t.String()
+				}
+
+				fmt.Fprintf(buf, "Type: basic\n")
+				fmt.Fprintf(buf, "Low Water: %d\n", int(infos["lowWater"].(float64)))
+				fmt.Fprintf(buf, "High Water: %d\n", int(infos["highWater"].(float64)))
+				fmt.Fprintf(buf, "Grace Period: %s\n", infos["gracePeriod"])
+				fmt.Fprintf(buf, "Connection Count: %d\n", int(infos["connCount"].(float64)))
+				fmt.Fprintf(buf, "Last Trim: %s\n", tstr)
+			case "none":
+				fmt.Println("Connection Manager Disabled")
+			default:
+				log.Errorf("unknown connection manager type: %s", infos["type"])
+				fmt.Println("Unknown Connection Manager Settings")
+			}
+
+			return buf, nil
+		},
+	},
+	Type: make(map[string]interface{}),
 }

@@ -97,4 +97,47 @@ test_expect_success "Addresses.NoAnnounce with /ipcidr affects addresses" '
 
 test_kill_ipfs_daemon
 
+test_launch_ipfs_daemon
+
+test_expect_success "ipfs swarm connmgr shows default settings" '
+	ipfs swarm connmgr > connmgr_out &&
+	grep "Low Water: 600" connmgr_out &&
+	grep "High Water: 900" connmgr_out &&
+	grep "Type: basic" connmgr_out
+'
+
+test_kill_ipfs_daemon
+
+test_expect_success "clear out connmgr config" '
+	ipfs config --json Swarm.ConnMgr.HighWater 1500
+	ipfs config Swarm.ConnMgr.GracePeriod "3s"
+'
+
+test_launch_ipfs_daemon
+
+test_expect_success "ipfs swarm connmgr shows modified settings" '
+	ipfs swarm connmgr > connmgr_out &&
+	grep "Low Water: 600" connmgr_out &&
+	grep "Grace Period: 3s" connmgr_out &&
+	grep "High Water: 1500" connmgr_out &&
+	grep "Type: basic" connmgr_out
+'
+
+test_kill_ipfs_daemon
+
+test_expect_success "clear out connmgr config" '
+	ipfs config --json Swarm.ConnMgr "{}"
+'
+
+test_launch_ipfs_daemon
+
+test_expect_success "ipfs swarm connmgr shows default settings" '
+	ipfs swarm connmgr > connmgr_out &&
+	grep "Low Water: 600" connmgr_out &&
+	grep "High Water: 900" connmgr_out &&
+	grep "Type: basic" connmgr_out
+'
+
+test_kill_ipfs_daemon
+
 test_done

@@ -472,9 +472,9 @@
     },
     {
       "author": "whyrusleeping",
-      "hash": "QmPErLx83hgF5XKqjeYaLWXJSFon4mH7YPzoftUvfrPgQG",
+      "hash": "QmUbUNq1Q6eE2LXqKzKW8BW1SUMqscAj9A3ot9j5suuaRb",
       "name": "go-libp2p-connmgr",
-      "version": "0.3.2"
+      "version": "0.3.3"
     },
     {
       "author": "why",
