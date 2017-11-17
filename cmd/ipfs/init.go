@@ -16,10 +16,14 @@ import (
 	namesys "github.com/ipfs/go-ipfs/namesys"
 	config "github.com/ipfs/go-ipfs/repo/config"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+
+	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 )
 
+// The default keypair is 2048-bit RSA
 const (
 	nBitsForKeypairDefault = 2048
+	keypairTypeDefault     = ci.RSA
 )
 
 var initCmd = &cmds.Command{
@@ -49,6 +53,7 @@ environment variable:
 	},
 	Options: []cmds.Option{
 		cmds.IntOption("bits", "b", "Number of bits to use in the generated RSA private key.").Default(nBitsForKeypairDefault),
+		cmds.IntOption("key-type", "k", "Key type (RSA or Ed25519-id)").Default(keypairTypeDefault),
 		cmds.BoolOption("empty-repo", "e", "Don't add and pin help files to the local storage.").Default(false),
 		cmds.StringOption("profile", "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
 
@@ -78,13 +83,19 @@ environment variable:
 			return
 		}
 
-		empty, _, err := req.Option("e").Bool()
+		empty, _, err := req.Option("empty-repo").Bool()
 		if err != nil {
 			res.SetError(err, cmds.ErrNormal)
 			return
 		}
 
-		nBitsForKeypair, _, err := req.Option("b").Int()
+		nBitsForKeypair, _, err := req.Option("bits").Int()
+		if err != nil {
+			res.SetError(err, cmds.ErrNormal)
+			return
+		}
+
+		keyType, _, err := req.Option("key-type").Int()
 		if err != nil {
 			res.SetError(err, cmds.ErrNormal)
 			return
@@ -118,7 +129,7 @@ environment variable:
 			profiles = strings.Split(profile, ",")
 		}
 
-		if err := doInit(os.Stdout, req.InvocContext().ConfigRoot, empty, nBitsForKeypair, profiles, conf); err != nil {
+		if err := doInit(os.Stdout, req.InvocContext().ConfigRoot, empty, nBitsForKeypair, keyType, profiles, conf); err != nil {
 			res.SetError(err, cmds.ErrNormal)
 			return
 		}
@@ -130,10 +141,10 @@ Reinitializing would overwrite your keys.
 `)
 
 func initWithDefaults(out io.Writer, repoRoot string) error {
-	return doInit(out, repoRoot, false, nBitsForKeypairDefault, nil, nil)
+	return doInit(out, repoRoot, false, nBitsForKeypairDefault, keypairTypeDefault, nil, nil)
 }
 
-func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config) error {
+func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair, keyType int, confProfiles []string, conf *config.Config) error {
 	if _, err := fmt.Fprintf(out, "initializing IPFS node at %s\n", repoRoot); err != nil {
 		return err
 	}
@@ -148,7 +159,7 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 
 	if conf == nil {
 		var err error
-		conf, err = config.Init(out, nBitsForKeypair)
+		conf, err = config.Init(out, nBitsForKeypair, keyType)
 		if err != nil {
 			return err
 		}
