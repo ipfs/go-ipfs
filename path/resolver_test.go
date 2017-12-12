@@ -1,26 +1,25 @@
-package path_test
+package path
 
 import (
 	"context"
 	"fmt"
 	"testing"
 
-	merkledag "github.com/ipfs/go-ipfs/merkledag"
+	"github.com/ipfs/go-ipfs/merkledag"
 	dagmock "github.com/ipfs/go-ipfs/merkledag/test"
-	path "github.com/ipfs/go-ipfs/path"
 
 	node "gx/ipfs/QmPN7cwmpcc4DWXb4KTB9dNAJgjuPY69h3npsMfhRrQL9c/go-ipld-format"
-	util "gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
+	"gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
 )
 
 func randNode() *merkledag.ProtoNode {
-	node := new(merkledag.ProtoNode)
-	node.SetData(make([]byte, 32))
-	util.NewTimeSeededRand().Read(node.Data())
-	return node
+	nd := new(merkledag.ProtoNode)
+	nd.SetData(make([]byte, 32))
+	util.NewTimeSeededRand().Read(nd.Data())
+	return nd
 }
 
-func TestRecurivePathResolution(t *testing.T) {
+func TestResolveToLastNode(t *testing.T) {
 	ctx := context.Background()
 	dagService := dagmock.Mock()
 
@@ -45,25 +44,76 @@ func TestRecurivePathResolution(t *testing.T) {
 		}
 	}
 
-	aKey := a.Cid()
-
-	segments := []string{aKey.String(), "child", "grandchild"}
-	p, err := path.FromSegments("/ipfs/", segments...)
+	pth, err := FromSegments("/ipfs/", a.Cid().String(), "child", "grandchild")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resolver := path.NewBasicResolver(dagService)
-	node, err := resolver.ResolvePath(ctx, p)
+	resolver := NewBasicResolver(dagService)
+	nd, pathSegments, err := resolver.ResolveToLastNode(ctx, pth)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if pathSegments != nil {
+		t.Fatal(fmt.Errorf(
+			"node resolution failed for %s: non-nil path segment %v",
+			pth.String(), pathSegments,
+		))
+	}
+
+	cKey := c.Cid()
+	key := nd.Cid()
+	if key.String() != cKey.String() {
+		t.Fatal(fmt.Errorf(
+			"node resolution failed for %s: %s != %s",
+			pth.String(), key.String(), cKey.String(),
+		))
+	}
+}
+
+func TestRecursivePathResolution(t *testing.T) {
+	ctx := context.Background()
+	dagService := dagmock.Mock()
+
+	a := randNode()
+	b := randNode()
+	c := randNode()
+
+	err := b.AddNodeLink("grandchild", c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = a.AddNodeLink("child", b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, n := range []node.Node{a, b, c} {
+		_, err = dagService.Add(n)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	pth, err := FromSegments("/ipfs/", a.Cid().String(), "child", "grandchild")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resolver := NewBasicResolver(dagService)
+	nd, err := resolver.ResolvePath(ctx, pth)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	cKey := c.Cid()
-	key := node.Cid()
+	key := nd.Cid()
 	if key.String() != cKey.String() {
 		t.Fatal(fmt.Errorf(
 			"recursive path resolution failed for %s: %s != %s",
-			p.String(), key.String(), cKey.String()))
+			pth.String(), key.String(), cKey.String(),
+		))
 	}
 }
