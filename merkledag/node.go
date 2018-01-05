@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	node "gx/ipfs/QmNwUEK7QbwSqyKBu3mMtToo8SUc6wQJ7gdZq4gGGJqfnf/go-ipld-format"
 	mh "gx/ipfs/QmYeKnKpubCMRiq3PGZcTREErthbb5Q9cXsCoSkD9bjEBd/go-multihash"
@@ -148,8 +149,23 @@ func (n *ProtoNode) RemoveNodeLink(name string) error {
 
 // Return a copy of the link with given name
 func (n *ProtoNode) GetNodeLink(name string) (*node.Link, error) {
+	allemptynames := true
 	for _, l := range n.links {
+		if allemptynames && l.Name != "" {
+			allemptynames = false
+		}
 		if l.Name == name {
+			return &node.Link{
+				Name: l.Name,
+				Size: l.Size,
+				Cid:  l.Cid,
+			}, nil
+		}
+	}
+	if allemptynames {
+		ix, err := strconv.Atoi(name)
+		if err == nil && ix >= 0 && ix < len(n.links) {
+			l := n.links[ix]
 			return &node.Link{
 				Name: l.Name,
 				Size: l.Size,
