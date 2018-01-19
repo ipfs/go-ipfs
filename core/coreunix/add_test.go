@@ -22,7 +22,9 @@ import (
 	"gx/ipfs/QmYsEQydGrsxNZfAiskvQ76N2xE9hDQtSAkRSynwMiUK3c/go-block-format"
 
 	"gx/ipfs/QmQp2a2Hhb7F6eK2A5hN8f9aJy4mtkEikL9Zj4cgB7d1dD/go-ipfs-cmdkit/files"
+	ds "gx/ipfs/QmdHG8MAuARdGHxx4rPQASLcvhz24fzjSQq7AJRAQEorq5/go-datastore"
 	cid "gx/ipfs/QmeSrf6pzut73u6zLQkRFQ3ygt3k6XFT2kjdYP8Tnkwwyg/go-cid"
+	syncds "gx/ipfs/QmdHG8MAuARdGHxx4rPQASLcvhz24fzjSQq7AJRAQEorq5/go-datastore/sync"
 )
 
 func TestAddRecursive(t *testing.T) {
@@ -147,8 +149,7 @@ func TestAddGCLive(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	set := cid.NewSet()
-	err = dag.EnumerateChildren(ctx, node.DAG.GetLinks, last, set.Visit)
+	err = dag.EnumerateChildren(ctx, node.DAG.GetLinks, last, dag.FetchingVisitor(ctx, cid.NewSet(), node.DAG))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +171,7 @@ func testAddWPosInfo(t *testing.T, rawLeaves bool) {
 
 	bs := &testBlockstore{GCBlockstore: node.Blockstore, expectedPath: "/tmp/foo.txt", t: t}
 	bserv := blockservice.New(bs, node.Exchange)
-	dserv := dag.NewDAGService(bserv)
+	dserv := dag.NewDAGService(bserv, syncds.MutexWrap(ds.NewMapDatastore()))
 	adder, err := NewAdder(context.Background(), node.Pinning, bs, dserv)
 	if err != nil {
 		t.Fatal(err)

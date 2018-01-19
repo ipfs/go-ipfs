@@ -35,13 +35,14 @@ var RepoCmd = &cmds.Command{
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"stat": repoStatCmd,
+		"stat":    repoStatCmd,
 	},
 	OldSubcommands: map[string]*oldcmds.Command{
 		"gc":      repoGcCmd,
-		"fsck":    RepoFsckCmd,
-		"version": repoVersionCmd,
-		"verify":  repoVerifyCmd,
+		"fsck":           RepoFsckCmd,
+		"version":        repoVersionCmd,
+		"verify":         repoVerifyCmd,
+		"flushlinkcache": repoFlushLinkCacheCmd,
 	},
 }
 
@@ -215,6 +216,33 @@ Version         string The repo version.
 			return nil
 
 		}),
+	},
+}
+
+var repoFlushLinkCacheCmd = &oldcmds.Command{
+	Helptext: cmdkit.HelpText{
+		Tagline: "Flush link cache.",
+		ShortDescription: `
+'ipfs repo flushlinkcache' is a plumbing command that will flush link cache.
+`,
+	},
+	Run: func(req oldcmds.Request, res oldcmds.Response) {
+		n, err := req.InvocContext().GetNode()
+		if err != nil {
+			res.SetError(err, cmdkit.ErrNormal)
+			return
+		}
+
+		err = corerepo.FlushLinkCache(req.Context(), n)
+		if err != nil {
+			res.SetError(err, cmdkit.ErrNormal)
+			return
+		}
+		res.SetOutput(&MessageOutput{"Link cache flushed.\n"})
+	},
+	Type: MessageOutput{},
+	Marshalers: oldcmds.MarshalerMap{
+		oldcmds.Text: MessageTextMarshaler,
 	},
 }
 

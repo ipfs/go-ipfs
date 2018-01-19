@@ -218,9 +218,9 @@ func setupNode(ctx context.Context, n *IpfsNode, cfg *BuildCfg) error {
 	}
 
 	n.Blocks = bserv.New(n.Blockstore, n.Exchange)
-	n.DAG = dag.NewDAGService(n.Blocks)
+	n.DAG = dag.NewDAGService(n.Blocks, n.Repo.Datastore())
 
-	internalDag := dag.NewDAGService(bserv.New(n.Blockstore, offline.Exchange(n.Blockstore)))
+	internalDag := dag.NewDAGService(bserv.New(n.Blockstore, offline.Exchange(n.Blockstore)), n.Repo.Datastore())
 	n.Pinning, err = pin.LoadPinner(n.Repo.Datastore(), n.DAG, internalDag)
 	if err != nil {
 		// TODO: we should move towards only running 'NewPinner' explicity on

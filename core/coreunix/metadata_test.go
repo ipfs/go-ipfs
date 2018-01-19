@@ -26,7 +26,7 @@ func getDagserv(t *testing.T) merkledag.DAGService {
 	db := dssync.MutexWrap(ds.NewMapDatastore())
 	bs := bstore.NewBlockstore(db)
 	blockserv := bserv.New(bs, offline.Exchange(bs))
-	return merkledag.NewDAGService(blockserv)
+	return merkledag.NewDAGService(blockserv, db)
 }
 
 func TestMetadata(t *testing.T) {

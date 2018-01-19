@@ -39,7 +39,7 @@ func getDagserv(t *testing.T) dag.DAGService {
 	db := dssync.MutexWrap(ds.NewMapDatastore())
 	bs := bstore.NewBlockstore(db)
 	blockserv := bserv.New(bs, offline.Exchange(bs))
-	return dag.NewDAGService(blockserv)
+	return dag.NewDAGService(blockserv, db)
 }
 
 func getRandFile(t *testing.T, ds dag.DAGService, size int64) node.Node {

@@ -13,7 +13,7 @@ import (
 // DiffEnumerate fetches every object in the graph pointed to by 'to' that is
 // not in 'from'. This can be used to more efficiently fetch a graph if you can
 // guarantee you already have the entirety of 'from'
-func DiffEnumerate(ctx context.Context, dserv node.NodeGetter, from, to *cid.Cid) error {
+func DiffEnumerate(ctx context.Context, dserv mdag.DAGService, from, to *cid.Cid) error {
 	fnd, err := dserv.Get(ctx, from)
 	if err != nil {
 		return fmt.Errorf("get %s: %s", from, err)
@@ -40,7 +40,7 @@ func DiffEnumerate(ctx context.Context, dserv node.NodeGetter, from, to *cid.Cid
 			if sset.Has(c.aft) {
 				continue
 			}
-			err := mdag.EnumerateChildrenAsync(ctx, mdag.GetLinksDirect(dserv), c.aft, sset.Visit)
+			err := mdag.EnumerateChildrenAsync(ctx, dserv.GetLinks, c.aft, mdag.FetchingVisitor(ctx, sset, dserv))
 			if err != nil {
 				return err
 			}

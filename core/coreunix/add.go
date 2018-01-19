@@ -570,7 +570,7 @@ func NewMemoryDagService() dag.DAGService {
 	// build mem-datastore for editor's intermediary nodes
 	bs := bstore.NewBlockstore(syncds.MutexWrap(ds.NewMapDatastore()))
 	bsrv := bserv.New(bs, offline.Exchange(bs))
-	return dag.NewDAGService(bsrv)
+	return dag.NewDAGService(bsrv, syncds.MutexWrap(ds.NewMapDatastore()))
 }
 
 // from core/commands/object.go

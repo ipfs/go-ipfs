@@ -45,6 +45,7 @@ test_gc_robust_part1() {
   '
 
   test_expect_success "'ipfs repo gc' should abort without removing anything" '
+		ipfs repo flushlinkcache
     test_must_fail ipfs repo gc 2>&1 | tee gc_err &&
     grep -q "could not retrieve links for $HASH1" gc_err &&
     grep -q "aborted" gc_err
@@ -128,6 +129,7 @@ test_gc_robust_part2() {
   '
 
   test_expect_success "'ipfs repo gc' should abort with two errors" '
+		ipfs repo flushlinkcache
     test_must_fail ipfs repo gc 2>&1 | tee repo_gc_out &&
     grep -q "could not retrieve links for $LEAF1" repo_gc_out &&
     grep -q "could not retrieve links for $LEAF2" repo_gc_out &&

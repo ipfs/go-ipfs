@@ -79,7 +79,7 @@ The JSON output contains type information.
 		if !resolve {
 			offlineexch := offline.Exchange(nd.Blockstore)
 			bserv := blockservice.New(nd.Blockstore, offlineexch)
-			dserv = merkledag.NewDAGService(bserv)
+			dserv = merkledag.NewDAGService(bserv, nd.Repo.Datastore())
 		}
 
 		paths := req.Arguments()

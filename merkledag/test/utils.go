@@ -10,7 +10,7 @@ import (
 )
 
 func Mock() dag.DAGService {
-	return dag.NewDAGService(Bserv())
+	return dag.NewDAGService(Bserv(), ds.NewMapDatastore())
 }
 
 func Bserv() bsrv.BlockService {

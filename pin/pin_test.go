@@ -53,7 +53,7 @@ func TestPinnerBasic(t *testing.T) {
 	bstore := blockstore.NewBlockstore(dstore)
 	bserv := bs.New(bstore, offline.Exchange(bstore))
 
-	dserv := mdag.NewDAGService(bserv)
+	dserv := mdag.NewDAGService(bserv, dstore)
 
 	// TODO does pinner need to share datastore with blockservice?
 	p := NewPinner(dstore, dserv, dserv)
@@ -178,7 +178,7 @@ func TestIsPinnedLookup(t *testing.T) {
 	bstore := blockstore.NewBlockstore(dstore)
 	bserv := bs.New(bstore, offline.Exchange(bstore))
 
-	dserv := mdag.NewDAGService(bserv)
+	dserv := mdag.NewDAGService(bserv, dstore)
 
 	// TODO does pinner need to share datastore with blockservice?
 	p := NewPinner(dstore, dserv, dserv)
@@ -278,7 +278,7 @@ func TestDuplicateSemantics(t *testing.T) {
 	bstore := blockstore.NewBlockstore(dstore)
 	bserv := bs.New(bstore, offline.Exchange(bstore))
 
-	dserv := mdag.NewDAGService(bserv)
+	dserv := mdag.NewDAGService(bserv, dstore)
 
 	// TODO does pinner need to share datastore with blockservice?
 	p := NewPinner(dstore, dserv, dserv)
@@ -313,7 +313,7 @@ func TestFlush(t *testing.T) {
 	bstore := blockstore.NewBlockstore(dstore)
 	bserv := bs.New(bstore, offline.Exchange(bstore))
 
-	dserv := mdag.NewDAGService(bserv)
+	dserv := mdag.NewDAGService(bserv, dstore)
 	p := NewPinner(dstore, dserv, dserv)
 	_, k := randNode()
 
@@ -329,7 +329,7 @@ func TestPinRecursiveFail(t *testing.T) {
 	dstore := dssync.MutexWrap(ds.NewMapDatastore())
 	bstore := blockstore.NewBlockstore(dstore)
 	bserv := bs.New(bstore, offline.Exchange(bstore))
-	dserv := mdag.NewDAGService(bserv)
+	dserv := mdag.NewDAGService(bserv, dstore)
 
 	p := NewPinner(dstore, dserv, dserv)
 
@@ -373,7 +373,7 @@ func TestPinUpdate(t *testing.T) {
 	bstore := blockstore.NewBlockstore(dstore)
 	bserv := bs.New(bstore, offline.Exchange(bstore))
 
-	dserv := mdag.NewDAGService(bserv)
+	dserv := mdag.NewDAGService(bserv, dstore)
 	p := NewPinner(dstore, dserv, dserv)
 	n1, c1 := randNode()
 	n2, c2 := randNode()

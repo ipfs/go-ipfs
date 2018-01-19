@@ -16,6 +16,28 @@ import (
 // for now, we use a PBNode intermediate thing.
 // because native go objects are nice.
 
+func intermediateMarshal(l *node.Link) *pb.PBLink {
+	pbl := &pb.PBLink{}
+	pbl.Name = &l.Name
+	pbl.Tsize = &l.Size
+	if l.Cid != nil {
+		pbl.Hash = l.Cid.Bytes()
+	}
+	return pbl
+}
+
+func intermediateUnmarshal(pbl *pb.PBLink) (*node.Link, error) {
+	l := new(node.Link)
+	l.Name = pbl.GetName()
+	l.Size = pbl.GetTsize()
+	c, err := cid.Cast(pbl.GetHash())
+	if err != nil {
+		return nil, fmt.Errorf("Link hash is not valid multihash. %v", err)
+	}
+	l.Cid = c
+	return l, nil
+}
+
 // unmarshal decodes raw data into a *Node instance.
 // The conversion uses an intermediate PBNode.
 func (n *ProtoNode) unmarshal(encoded []byte) error {

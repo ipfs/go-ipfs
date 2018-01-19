@@ -30,6 +30,7 @@ type BlockService interface {
 	AddBlock(o blocks.Block) (*cid.Cid, error)
 	AddBlocks(bs []blocks.Block) ([]*cid.Cid, error)
 	GetBlock(ctx context.Context, c *cid.Cid) (blocks.Block, error)
+	FetchBlock(ctx context.Context, c *cid.Cid) error
 	GetBlocks(ctx context.Context, ks []*cid.Cid) <-chan blocks.Block
 	DeleteBlock(o blocks.Block) error
 	Close() error
@@ -193,6 +194,34 @@ func getBlock(ctx context.Context, c *cid.Cid, bs blockstore.Blockstore, f excha
 	}
 
 	return nil, err
+}
+
+// FetchBlock ensures requested block is present in local storage
+func (bs *blockService) FetchBlock(ctx context.Context, c *cid.Cid) error {
+	log.Debugf("BlockService FetchBlock: '%s'", c)
+
+	present, err := bs.blockstore.Has(c)
+	if err != nil {
+		return err
+	}
+	if present {
+		return nil
+	}
+
+	if bs.exchange != nil {
+		log.Debug("Blockservice: Searching bitswap")
+		_, err := bs.exchange.GetBlock(ctx, c)
+		if err != nil {
+			if err == blockstore.ErrNotFound {
+				return ErrNotFound
+			}
+			return err
+		}
+		return nil
+	}
+
+	log.Debug("Blockservice FetchBlock: Not found")
+	return ErrNotFound
 }
 
 // GetBlocks gets a list of blocks asynchronously and returns through

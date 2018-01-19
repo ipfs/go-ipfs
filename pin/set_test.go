@@ -39,7 +39,7 @@ func objCount(d ds.Datastore) int {
 func TestSet(t *testing.T) {
 	dst := ds.NewMapDatastore()
 	bstore := blockstore.NewBlockstore(dst)
-	ds := dag.NewDAGService(bserv.New(bstore, offline.Exchange(bstore)))
+	ds := dag.NewDAGService(bserv.New(bstore, offline.Exchange(bstore)), dst)
 
 	// this value triggers the creation of a recursive shard.
 	// If the recursive sharding is done improperly, this will result in

@@ -154,17 +154,49 @@ func TestDiffEnumBasic(t *testing.T) {
 }
 
 type getLogger struct {
-	ds  node.NodeGetter
+	ds  dag.DAGService
 	log []*cid.Cid
 }
 
 func (gl *getLogger) Get(ctx context.Context, c *cid.Cid) (node.Node, error) {
-	nd, err := gl.ds.Get(ctx, c)
+	n, err := gl.ds.Get(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 	gl.log = append(gl.log, c)
-	return nd, nil
+	return n, nil
+}
+
+func (gl *getLogger) Add(n node.Node) (*cid.Cid, error) {
+	return gl.ds.Add(n)
+}
+
+func (gl *getLogger) Fetch(ctx context.Context, c *cid.Cid) error {
+	err := gl.ds.Fetch(ctx, c)
+	if err == nil {
+		gl.log = append(gl.log, c)
+	}
+	return err
+}
+
+func (gl *getLogger) Remove(n node.Node) error {
+	return gl.ds.Remove(n)
+}
+
+func (gl *getLogger) GetMany(ctx context.Context, cids []*cid.Cid) <-chan *dag.NodeOption {
+	return gl.ds.GetMany(ctx, cids)
+}
+
+func (gl *getLogger) Batch() *dag.Batch {
+	return gl.ds.Batch()
+}
+
+func (gl *getLogger) GetLinks(ctx context.Context, c *cid.Cid) ([]*node.Link, error) {
+	return gl.ds.GetLinks(ctx, c)
+}
+
+func (gl *getLogger) GetOfflineLinkService() dag.LinkService {
+	return gl.ds.GetOfflineLinkService()
 }
 
 func assertCidList(a, b []*cid.Cid) error {

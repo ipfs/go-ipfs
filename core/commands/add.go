@@ -251,13 +251,14 @@ You can now check what blocks have been created by:
 		}
 
 		exch := n.Exchange
+
 		local, _, _ := req.Option("local").Bool()
 		if local {
 			exch = offline.Exchange(addblockstore)
 		}
 
 		bserv := blockservice.New(addblockstore, exch)
-		dserv := dag.NewDAGService(bserv)
+		dserv := dag.NewDAGService(bserv, n.Repo.Datastore())
 
 		outChan := make(chan interface{}, adderOutChanSize)
 
