@@ -33,6 +33,11 @@ import (
 	mfs "github.com/ipfs/go-ipfs/mfs"
 	namesys "github.com/ipfs/go-ipfs/namesys"
 	ipnsrp "github.com/ipfs/go-ipfs/namesys/republisher"
+	iprs "github.com/dirkmc/go-iprs"
+	iprsc "github.com/dirkmc/go-iprs/certificate"
+	iprsrec "github.com/dirkmc/go-iprs/record"
+	iprsvs "github.com/dirkmc/go-iprs/vs"
+	iprsvl "github.com/dirkmc/go-iprs/validation"
 	p2p "github.com/ipfs/go-ipfs/p2p"
 	path "github.com/ipfs/go-ipfs/path"
 	pin "github.com/ipfs/go-ipfs/pin"
@@ -78,6 +83,8 @@ import (
 )
 
 const IpnsValidatorTag = "ipns"
+const IprsValidatorTag = "iprs"
+const CertValidatorTag = "cert"
 
 const kReprovideFrequency = time.Hour * 12
 const discoveryConnTimeout = time.Second * 30
@@ -125,14 +132,16 @@ type IpfsNode struct {
 	FilesRoot  *mfs.Root
 
 	// Online
-	PeerHost     p2phost.Host        // the network host (server+client)
-	Bootstrapper io.Closer           // the periodic bootstrapper
-	Routing      routing.IpfsRouting // the routing system. recommend ipfs-dht
-	Exchange     exchange.Interface  // the block exchange + strategy (bitswap)
-	Namesys      namesys.NameSystem  // the name system, resolves paths to hashes
-	Ping         *ping.PingService
-	Reprovider   *rp.Reprovider // the value reprovider system
-	IpnsRepub    *ipnsrp.Republisher
+	PeerHost      p2phost.Host           // the network host (server+client)
+	Bootstrapper  io.Closer              // the periodic bootstrapper
+	Routing       routing.IpfsRouting    // the routing system. recommend ipfs-dht
+	Exchange      exchange.Interface     // the block exchange + strategy (bitswap)
+	Namesys       namesys.NameSystem     // the name system, resolves paths to hashes
+	Iprs          iprs.RecordSystem      // the record system, resolves paths to hashes
+	RecordFactory *iprsrec.RecordFactory // the factory for IPRS records
+	Ping          *ping.PingService
+	Reprovider    *rp.Reprovider         // the value reprovider system
+	IpnsRepub     *ipnsrp.Republisher
 
 	Floodsub *floodsub.PubSub
 	P2P      *p2p.P2P
@@ -460,6 +469,11 @@ func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, host p2phost
 	if err != nil {
 		return err
 	}
+
+	// setup IPRS
+	kvs := iprsvs.NewKadValueStore(n.Repo.Datastore(), n.Routing)
+	n.Iprs = iprs.NewRecordSystem(kvs, size)
+	n.RecordFactory = iprsrec.NewRecordFactory(kvs)
 
 	// setup name system
 	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size)
@@ -798,6 +812,10 @@ func (n *IpfsNode) SetupOfflineRouting() error {
 		return err
 	}
 
+	kvs := iprsvs.NewKadValueStore(n.Repo.Datastore(), n.Routing)
+	n.Iprs = iprs.NewRecordSystem(kvs, size)
+	n.RecordFactory = iprsrec.NewRecordFactory(kvs)
+
 	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size)
 
 	return nil
@@ -951,6 +969,10 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore repo.Dat
 	dhtRouting := dht.NewDHT(ctx, host, dstore)
 	dhtRouting.Validator[IpnsValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
 	dhtRouting.Selector[IpnsValidatorTag] = namesys.IpnsSelectorFunc
+	dhtRouting.Validator[IprsValidatorTag] = iprsvl.RecordChecker.ValidChecker
+	dhtRouting.Selector[IprsValidatorTag] = iprsvl.RecordChecker.Selector
+	dhtRouting.Validator[CertValidatorTag] = iprsc.CertificateValidator
+	dhtRouting.Selector[CertValidatorTag] = iprsc.CertificateSelector
 	return dhtRouting, nil
 }
 

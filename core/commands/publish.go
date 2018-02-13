@@ -168,7 +168,6 @@ type publishOpts struct {
 }
 
 func publish(ctx context.Context, n *core.IpfsNode, k crypto.PrivKey, ref path.Path, opts *publishOpts) (*IpnsEntry, error) {
-
 	if opts.verifyExists {
 		// verify the path exists
 		_, err := core.Resolve(ctx, n.Namesys, n.Resolver, ref)
@@ -178,10 +177,22 @@ func publish(ctx context.Context, n *core.IpfsNode, k crypto.PrivKey, ref path.P
 	}
 
 	eol := time.Now().Add(opts.pubValidTime)
+	record := n.RecordFactory.NewEolKeyRecord(ref, k, eol)
+	iprsKey, err := record.BasePath()
+	if err != nil {
+		return nil, err
+	}
+	err = n.Iprs.Publish(ctx, iprsKey, record)
+	if err != nil {
+		return nil, err
+	}
+
+	/*
 	err := n.Namesys.PublishWithEOL(ctx, k, ref, eol)
 	if err != nil {
 		return nil, err
 	}
+	*/
 
 	pid, err := peer.IDFromPrivateKey(k)
 	if err != nil {

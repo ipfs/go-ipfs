@@ -7,8 +7,9 @@ import (
 
 	cmds "github.com/ipfs/go-ipfs/commands"
 	e "github.com/ipfs/go-ipfs/core/commands/e"
+	iprs "github.com/dirkmc/go-iprs"
 	namesys "github.com/ipfs/go-ipfs/namesys"
-	offline "github.com/ipfs/go-ipfs/routing/offline"
+	//offline "github.com/ipfs/go-ipfs/routing/offline"
 
 	"gx/ipfs/QmceUdzxkimdYsgtX733uNgzf1DLHyBKN6ehGSp85ayppM/go-ipfs-cmdkit"
 )
@@ -59,7 +60,6 @@ Resolve the value of a dnslink:
 		cmdkit.BoolOption("nocache", "n", "Do not use cached entries."),
 	},
 	Run: func(req cmds.Request, res cmds.Response) {
-
 		n, err := req.InvocContext().GetNode()
 		if err != nil {
 			res.SetError(err, cmdkit.ErrNormal)
@@ -78,13 +78,15 @@ Resolve the value of a dnslink:
 		local, _, _ := req.Option("local").Bool()
 
 		// default to nodes namesys resolver
-		var resolver namesys.Resolver = n.Namesys
+		//var resolver namesys.Resolver = n.Namesys
+		var resolver iprs.Resolver = n.Iprs
 
 		if local && nocache {
 			res.SetError(errors.New("cannot specify both local and nocache"), cmdkit.ErrNormal)
 			return
 		}
 
+		/*
 		if local {
 			offroute := offline.NewOfflineRouter(n.Repo.Datastore(), n.PrivateKey)
 			resolver = namesys.NewRoutingResolver(offroute, 0)
@@ -93,7 +95,7 @@ Resolve the value of a dnslink:
 		if nocache {
 			resolver = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), 0)
 		}
-
+		*/
 		var name string
 		if len(req.Arguments()) == 0 {
 			if n.Identity == "" {
@@ -111,9 +113,13 @@ Resolve the value of a dnslink:
 		if recursive {
 			depth = namesys.DefaultDepthLimit
 		}
-
+/*
 		if !strings.HasPrefix(name, "/ipns/") {
 			name = "/ipns/" + name
+		}
+*/
+		if !strings.HasPrefix(name, "/iprs/") {
+			name = "/iprs/" + name
 		}
 
 		output, err := resolver.ResolveN(req.Context(), name, depth)
