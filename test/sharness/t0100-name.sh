@@ -90,4 +90,17 @@ test_expect_success "publish an explicit node ID as key name looks good" '
   test_cmp expected_node_id_publish actual_node_id_publish
 '
 
+# publish with the default node ID as key name
+
+test_expect_success "'ipfs name publish --key=<self peer-id> <hash>' succeeds" '
+  PEERID=`ipfs id --format="<id>"` &&
+  test_check_peerid "${PEERID}" &&
+  ipfs name publish --key=${PEERID} "/ipfs/$HASH_WELCOME_DOCS" >actual_self_node_id_publish
+'
+
+test_expect_success "publish the explicit self node ID as key name looks good" '
+  echo "Published to ${PEERID}: /ipfs/$HASH_WELCOME_DOCS" >expected_self_node_id_publish &&
+  test_cmp expected_self_node_id_publish actual_self_node_id_publish
+'
+
 test_done

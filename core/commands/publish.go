@@ -205,6 +205,10 @@ func keylookup(n *core.IpfsNode, k string) (crypto.PrivKey, error) {
 		return nil, err
 	}
 
+	if k == n.Identity.Pretty() {
+		return n.PrivateKey, nil
+	}
+
 	keys, err := n.Repo.Keystore().List()
 	if err != nil {
 		return nil, err
