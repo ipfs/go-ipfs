@@ -7,9 +7,11 @@ import (
 
 	cmds "github.com/ipfs/go-ipfs/commands"
 	e "github.com/ipfs/go-ipfs/core/commands/e"
+	keystore "github.com/ipfs/go-ipfs/keystore"
 	namesys "github.com/ipfs/go-ipfs/namesys"
 
 	offline "gx/ipfs/QmZRcGYvxdauCd7hHnMYLYqcZRaDjv24c7eUNyJojAcdBb/go-ipfs-routing/offline"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"gx/ipfs/QmceUdzxkimdYsgtX733uNgzf1DLHyBKN6ehGSp85ayppM/go-ipfs-cmdkit"
 )
 
@@ -104,6 +106,27 @@ Resolve the value of a dnslink:
 
 		} else {
 			name = req.Arguments()[0]
+		}
+
+		// if name has no slashes it might be a key
+		if !strings.Contains(name, "/") {
+			privKey, err := n.GetKey(name)
+			if privKey != nil {
+				pubKey := privKey.GetPublic()
+
+				pid, err := peer.IDFromPublicKey(pubKey)
+				if err != nil {
+					res.SetError(err, cmdkit.ErrNormal)
+					return
+				}
+
+				name = pid.Pretty()
+			}
+
+			if err != nil && err != keystore.ErrNoSuchKey {
+				res.SetError(err, cmdkit.ErrNormal)
+				return
+			}
 		}
 
 		recursive, _, _ := req.Option("recursive").Bool()

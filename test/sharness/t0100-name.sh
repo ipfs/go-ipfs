@@ -32,6 +32,16 @@ test_expect_success "resolve output looks good" '
   test_cmp expected2 output
 '
 
+# also test resolving the "self" key
+
+test_expect_success "'ipfs name resolve self' succeeds" '
+  ipfs name resolve self >self_output
+'
+
+test_expect_success "self resolve output looks good" '
+  test_cmp expected2 self_output
+'
+
 # now test with a path
 
 test_expect_success "'ipfs name publish' succeeds" '
