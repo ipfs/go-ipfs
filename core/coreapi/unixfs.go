@@ -2,12 +2,16 @@ package coreapi
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	coreiface "github.com/ipfs/go-ipfs/core/coreapi/interface"
 	coreunix "github.com/ipfs/go-ipfs/core/coreunix"
+	mdag "github.com/ipfs/go-ipfs/merkledag"
 	uio "github.com/ipfs/go-ipfs/unixfs/io"
+	ftpb "github.com/ipfs/go-ipfs/unixfs/pb"
 
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	ipld "gx/ipfs/Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES/go-ipld-format"
 )
@@ -38,12 +42,14 @@ func (api *UnixfsAPI) Cat(ctx context.Context, p coreiface.Path) (coreiface.Read
 	}
 
 	r, err := uio.NewDagReader(ctx, dagnode, dget)
-	if err == uio.ErrIsDir {
+	switch err {
+	case uio.ErrIsDir:
 		return nil, coreiface.ErrIsDir
-	} else if err != nil {
-		return nil, err
+	case uio.ErrCantReadSymlinks:
+		return nil, coreiface.ErrIsSymLink
+	default:
 	}
-	return r, nil
+	return r, err
 }
 
 // Ls returns the contents of an IPFS or IPNS object(s) at path p, with the format:
@@ -74,6 +80,30 @@ func (api *UnixfsAPI) Ls(ctx context.Context, p coreiface.Path) ([]*ipld.Link, e
 		links[i] = &ipld.Link{Name: l.Name, Size: l.Size, Cid: l.Cid}
 	}
 	return links, nil
+}
+
+var NotASymLink = errors.New("not a symbolic link")
+
+func (api *UnixfsAPI) ReadSymLink(ctx context.Context, p coreiface.Path) (string, error) {
+	dagnode, err := api.core().ResolveNode(ctx, p)
+	if err != nil {
+		return "", err
+	}
+	switch n := dagnode.(type) {
+	case *mdag.ProtoNode:
+		pb := new(ftpb.Data)
+		if err := proto.Unmarshal(n.Data(), pb); err != nil {
+			return "", err
+		}
+		switch pb.GetType() {
+		case ftpb.Data_Symlink:
+			return string(pb.GetData()), nil
+		default:
+			return "", NotASymLink
+		}
+	default:
+		return "", NotASymLink
+	}
 }
 
 func (api *UnixfsAPI) core() coreiface.CoreAPI {

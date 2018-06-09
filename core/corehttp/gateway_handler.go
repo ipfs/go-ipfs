@@ -185,12 +185,15 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 
 	dr, err := i.api.Unixfs().Cat(ctx, resolvedPath)
 	dir := false
+	symLink := false
 	switch err {
 	case nil:
 		// Cat() worked
 		defer dr.Close()
 	case coreiface.ErrIsDir:
 		dir = true
+	case coreiface.ErrIsSymLink:
+		symLink = true
 	default:
 		webError(w, "ipfs cat "+escapedURLPath, err, http.StatusNotFound)
 		return
@@ -264,6 +267,18 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 
 		// set modtime to a really long time ago, since files are immutable and should stay cached
 		modtime = time.Unix(1, 0)
+	}
+
+	if symLink {
+		link, err := i.api.Unixfs().ReadSymLink(ctx, resolvedPath)
+		if err != nil {
+			internalWebError(w, err)
+			return
+		}
+		newPath := gopath.Join(gopath.Dir(urlPath), link)
+		http.Redirect(w, r, newPath, 302)
+		log.Debugf("symlink: redirect to %s", newPath)
+		return
 	}
 
 	if !dir {

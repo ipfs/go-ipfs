@@ -17,4 +17,7 @@ type UnixfsAPI interface {
 
 	// Ls returns the list of links in a directory
 	Ls(context.Context, Path) ([]*ipld.Link, error)
+
+	// ReadSymLink returns the contents of a symbolic link
+	ReadSymLink(context.Context, Path) (string, error)
 }

@@ -193,6 +193,46 @@ test_expect_success "GET compact blocks succeeds" '
   test_cmp expected actual
 '
 
+#
+#
+#
+
+test_expect_success "create dir with symbolic links" '
+  mkdir dirwlinks/ &&
+  ( cd dirwlinks &&
+    echo "A Simple File" > afile &&
+    ln -s afile linktofile &&
+    mkdir adir &&
+    echo "Another File" > adir/bfile &&
+    ln -s adir linktodir
+  )
+'
+
+test_expect_success "add dir with symbolic links" '
+  DIRHASH=$(ipfs add -Q -r dirwlinks)
+  echo $DIRHASH
+'
+
+test_expect_success "getting afile works" '
+  curl -L -o actual "http://127.0.0.1:$port/ipfs/$DIRHASH/afile" &&
+  test_cmp dirwlinks/afile actual
+'
+
+test_expect_success "getting linktofile works" '
+  curl -L -o actual "http://127.0.0.1:$port/ipfs/$DIRHASH/linktofile" &&
+  test_cmp dirwlinks/afile actual
+'
+
+test_expect_success "getting adir/bfile works" '
+  curl -L -o actual "http://127.0.0.1:$port/ipfs/$DIRHASH/adir/bfile" &&
+  test_cmp dirwlinks/adir/bfile actual
+'
+
+test_expect_failure "getting linktodir/bfile works" '
+  curl -L -o actual "http://127.0.0.1:$port/ipfs/$DIRHASH/linktodir/bfile" &&
+  test_cmp dirwlinks/adir/bfile actual
+'
+
 test_kill_ipfs_daemon
 
 test_done
