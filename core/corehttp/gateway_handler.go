@@ -18,6 +18,7 @@ import (
 	"github.com/ipfs/go-ipfs/importer"
 	dag "github.com/ipfs/go-ipfs/merkledag"
 	dagutils "github.com/ipfs/go-ipfs/merkledag/utils"
+	mfs "github.com/ipfs/go-ipfs/mfs"
 	path "github.com/ipfs/go-ipfs/path"
 	resolver "github.com/ipfs/go-ipfs/path/resolver"
 	ft "github.com/ipfs/go-ipfs/unixfs"
@@ -34,6 +35,7 @@ import (
 const (
 	ipfsPathPrefix = "/ipfs/"
 	ipnsPathPrefix = "/ipns/"
+	mfsPathPrefix  = "/local/"
 )
 
 // gatewayHandler is a HTTP handler that serves IPFS objects (accessible by default at /ipfs/<path>)
@@ -160,10 +162,36 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 		ipnsHostname = true
 	}
 
-	parsedPath, err := coreapi.ParsePath(urlPath)
-	if err != nil {
-		webError(w, "invalid ipfs path", err, http.StatusBadRequest)
-		return
+	var parsedPath coreiface.Path
+	var err error
+
+	// Access the Mutable FileSystem.
+	// This block merely looks up the hash of the given path, and continues as usual.
+	if strings.HasPrefix(urlPath, mfsPathPrefix) {
+		mfPath := "/" + strings.TrimPrefix(urlPath, mfsPathPrefix)
+		fsnode, err := mfs.Lookup(i.node.FilesRoot, mfPath)
+		if err != nil {
+			webError(w, "ipfs files stat "+mfPath, err, http.StatusNotFound)
+			return
+		}
+		dagnode, err := fsnode.GetNode()
+		if err != nil {
+			webError(w, "ipfs files stat "+mfPath, err, http.StatusNotFound)
+			return
+		}
+		stat, err := dagnode.Stat()
+		if err != nil {
+			webError(w, "ipfs files stat "+mfPath, err, http.StatusNotFound)
+			return
+		}
+		parsedPath, err = coreapi.ParsePath(ipfsPathPrefix + stat.Hash)
+	} else {
+		//Otherwise, parse the path as usual.
+		parsedPath, err = coreapi.ParsePath(urlPath)
+		if err != nil {
+			webError(w, "invalid ipfs path", err, http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Resolve path to the final DAG node for the ETag

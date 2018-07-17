@@ -51,6 +51,7 @@ const (
 	enableFloodSubKwd         = "enable-pubsub-experiment"
 	enableIPNSPubSubKwd       = "enable-namesys-pubsub"
 	enableMultiplexKwd        = "enable-mplex-experiment"
+	enableMFSGateway          = "enable-mfs-gateway"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
@@ -164,6 +165,7 @@ Headers.
 		cmdkit.BoolOption(enableFloodSubKwd, "Instantiate the ipfs daemon with the experimental pubsub feature enabled."),
 		cmdkit.BoolOption(enableIPNSPubSubKwd, "Enable IPNS record distribution through pubsub; enables pubsub."),
 		cmdkit.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
+		cmdkit.BoolOption(enableMFSGateway, "Enable access to the Mutable Filesystem through the gateway, from URLs begining with /local/"),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
 		// cmdkit.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
@@ -540,13 +542,20 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 		fmt.Printf("Gateway (readonly) server listening on %s\n", gatewayMaddr)
 	}
 
+	var enabledPaths = []string{"/ipfs", "/ipns"}
+
+	// If --enable-mfs-gateway is set, allow URLs from /local to access the mfs.
+	if mfs, ok := req.Options[enableMFSGateway].(bool); ok && mfs {
+		enabledPaths = append(enabledPaths, "/local")
+	}
+
 	var opts = []corehttp.ServeOption{
 		corehttp.MetricsCollectionOption("gateway"),
 		corehttp.CheckVersionOption(),
 		corehttp.CommandsROOption(*cctx),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(writable, enabledPaths...),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
