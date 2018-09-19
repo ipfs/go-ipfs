@@ -33,6 +33,35 @@ test_expect_success "resolve output looks good" '
   test_cmp expected2 output
 '
 
+# test resolve key
+
+test_expect_success "'ipfs name resolve self' succeeds" '
+  ipfs name resolve self >self_output
+'
+
+test_expect_success "self resolve output looks good" '
+  test_cmp expected2 self_output
+'
+
+test_expect_success "'ipfs name publish --key=test_key' succeeds" '
+  TEST_KEY_HASH=$(ipfs key gen test_key --type=rsa --size=2048)
+  ipfs name publish --key=test_key "/ipfs/$HASH_WELCOME_DOCS" >publish_out
+'
+
+test_expect_success "test_key publish output looks good" '
+  echo "Published to ${TEST_KEY_HASH}: /ipfs/$HASH_WELCOME_DOCS" >expected1 &&
+  test_cmp expected1 publish_out
+'
+
+test_expect_success "'ipfs name resolve test_key' succeeds" '
+  ipfs name resolve test_key > test_key_output
+'
+
+test_expect_success "test_key resolve output looks good" '
+  test_cmp expected2 test_key_output
+  ipfs key rm test_key
+'
+
 # now test with a path
 
 test_expect_success "'ipfs name publish --allow-offline' succeeds" '

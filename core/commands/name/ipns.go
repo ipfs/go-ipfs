@@ -9,10 +9,12 @@ import (
 
 	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
 	e "github.com/ipfs/go-ipfs/core/commands/e"
+	"github.com/ipfs/go-ipfs/keystore"
 	namesys "github.com/ipfs/go-ipfs/namesys"
 	nsopts "github.com/ipfs/go-ipfs/namesys/opts"
 
 	cmds "gx/ipfs/QmPTfgFTo9PFr1PvPKyKoeMgBvYPh6cX3aDP7DHKVbnCbi/go-ipfs-cmds"
+	"gx/ipfs/QmQsErDt8Qgw1XrsXf2BpEzDgGWtB1YLsTAARBup5b6B9W/go-libp2p-peer"
 	logging "gx/ipfs/QmRREK2CAZ5Re2Bd9zZFG6FeYDppUWt5cMgsoUEp3ktgSr/go-log"
 	offline "gx/ipfs/QmSNe4MWVxZWk6UxxW2z2EKofFo4GdFzud1vfn1iVby3mj/go-ipfs-routing/offline"
 	"gx/ipfs/QmSP88ryZkHSRn1fnngAaV2Vcn63WUJzAavnRM9CVdU1Ky/go-ipfs-cmdkit"
@@ -124,6 +126,25 @@ Resolve the value of a dnslink:
 
 		} else {
 			name = req.Arguments[0]
+
+			// maybe the name is key if it has no slashes
+			if !strings.Contains(name, "/") {
+				privKey, err := n.GetKey(name)
+				if privKey != nil {
+					pubKey := privKey.GetPublic()
+					pid, err := peer.IDFromPublicKey(pubKey)
+					if err != nil {
+						res.SetError(err, cmdkit.ErrNormal)
+						return
+					}
+					name = pid.Pretty()
+				}
+
+				if err != nil && err != keystore.ErrNoSuchKey {
+					res.SetError(err, cmdkit.ErrNormal)
+					return
+				}
+			}
 		}
 
 		recursive, _ := req.Options[recursiveOptionName].(bool)
