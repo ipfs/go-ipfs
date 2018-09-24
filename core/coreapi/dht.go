@@ -67,7 +67,7 @@ func (api *DhtAPI) Provide(ctx context.Context, path coreiface.Path, opts ...cao
 
 	c := rp.Cid()
 
-	has, err := api.node.Blockstore.Has(c)
+	has, err := api.node.Blockstore.Has(c.Hash())
 	if err != nil {
 		return err
 	}

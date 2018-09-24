@@ -70,7 +70,7 @@ func addLink(ctx context.Context, ds ipld.DAGService, root *dag.ProtoNode, child
 		return nil, err
 	}
 
-	_ = ds.Remove(ctx, root.Cid())
+	//_ = ds.Remove(ctx, root.Cid())
 
 	// ensure no link with that name already exists
 	_ = root.RemoveNodeLink(childname) // ignore error, only option is ErrNotFound
@@ -124,7 +124,7 @@ func (e *Editor) insertNodeAtPath(ctx context.Context, root *dag.ProtoNode, path
 		return nil, err
 	}
 
-	_ = e.tmp.Remove(ctx, root.Cid())
+	//_ = e.tmp.Remove(ctx, root.Cid())
 
 	_ = root.RemoveNodeLink(path[0])
 	err = root.AddNodeLink(path[0], ndprime)
@@ -183,7 +183,7 @@ func (e *Editor) rmLink(ctx context.Context, root *dag.ProtoNode, path []string)
 		return nil, err
 	}
 
-	e.tmp.Remove(ctx, root.Cid())
+	//e.tmp.Remove(ctx, root.Cid())
 
 	_ = root.RemoveNodeLink(path[0])
 	err = root.AddNodeLink(path[0], nnode)

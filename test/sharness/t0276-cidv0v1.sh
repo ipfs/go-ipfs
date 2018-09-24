@@ -34,11 +34,11 @@ test_expect_success "check hashes" '
 '
 
 test_expect_success "make sure CIDv1 hash really is in the repo" '
-  ipfs refs local | grep -q $AHASHv1
+  ipfs refs local | grep -q $(cid-fmt -b f %M $AHASHv1)
 '
 
 test_expect_success "make sure CIDv0 hash really is in the repo" '
-  ipfs refs local | grep -q $AHASHv0
+  ipfs refs local | grep -q $(cid-fmt -b f %M $AHASHv0)
 '
 
 test_expect_success "run gc" '
@@ -46,7 +46,7 @@ test_expect_success "run gc" '
 '
 
 test_expect_success "make sure the CIDv0 hash is in the repo" '
-  ipfs refs local | grep -q $AHASHv0
+  ipfs refs local | grep -q $(cid-fmt -b f %M $AHASHv0)
 '
 
 test_expect_success "make sure we can get CIDv0 added file" '
@@ -54,14 +54,10 @@ test_expect_success "make sure we can get CIDv0 added file" '
   test_cmp afile thefile
 '
 
-test_expect_success "make sure the CIDv1 hash is not in the repo" '
-  ! ipfs refs local | grep -q $AHASHv1
-'
-
 test_expect_success "clean up" '
   ipfs pin rm $AHASHv0 &&
   ipfs repo gc &&
-  ! ipfs refs local | grep -q $AHASHv0
+  ! ipfs refs local | grep -q $(cid-fmt -b f %M $AHASHv0)
 '
 
 #

@@ -19,10 +19,10 @@ test_gc_robust_part1() {
   HASH1FILE=.ipfs/blocks/L3/CIQNIPL4GP62ZMNNSLZ2G33Z3T5VAN3YHCJTGT5FG45XWH5FGZRXL3A.data
 
   LEAF1=zb2rhZWKCMcHCfCym41ocwE5BhNQsEVLrwBkLEQaxJzRHHZch
-  LEAF1FILE=.ipfs/blocks/C2/AFKREIBKRCW7HF6NHR6DVWECQXC5RQC7U7PKHKTI53BYYZNQP23DK5FC2Y.data
+  LEAF1FILE=.ipfs/blocks/FV/CIQCVCFN6OL42PD4HLMIFBOF3DAF7J66UOVGR3WDRRS3A7VWGV2KFVQ.data
 
   LEAF2=zb2rhdUpCuyoQPRtvBW8JhAEfPaNd9dBb3QQCMMWYS1V8hjBR
-  LEAF2FILE=.ipfs/blocks/Q6/BAFKREIDFSUIR43GJPHNDXXQA45GJVNRZBET3CRPUMYJCBLK3RTN7ZAMQ6Q
+  LEAF2FILE=.ipfs/blocks/B5/CIQGLFIRDZWMS6O2HPPABZ2MTK3DSCJHWFC7IZQSECWVXDG37SAZB5A.data
 
   LEAF3=zb2rhnwyvreekPqEMAbKqs35KYHxkNi7pXED7L2TfJKveTTva
   LEAF4=zb2rhnvAVvfDDnndcfQkwqNgUm94ba3zBSXyJKCfVXwU4FXx2
@@ -71,10 +71,10 @@ test_gc_robust_part1() {
 
   test_expect_success "'ipfs repo gc' should still run and remove as much as possible" '
     test_must_fail ipfs repo gc 2>&1 | tee repo_gc_out &&
-    grep -q "removed $HASH1" repo_gc_out &&
-    grep -q "could not remove $LEAF2" repo_gc_out &&
-    grep -q "removed $LEAF3" repo_gc_out &&
-    grep -q "removed $LEAF4" repo_gc_out
+    grep -q "removed $(cid-fmt -b f %M $HASH1)" repo_gc_out &&
+    grep -q "could not remove $(cid-fmt -b f %M $LEAF2)" repo_gc_out &&
+    grep -q "removed $(cid-fmt -b f %M $LEAF3)" repo_gc_out &&
+    grep -q "removed $(cid-fmt -b f %M $LEAF4)" repo_gc_out
   '
 
   test_expect_success "fix the permission problem" '
@@ -83,7 +83,7 @@ test_gc_robust_part1() {
 
   test_expect_success "'ipfs repo gc' should be ok now" '
     ipfs repo gc | tee repo_gc_out
-    grep -q "removed $LEAF2" repo_gc_out
+    grep -q "removed $(cid-fmt -b f %M $LEAF2)" repo_gc_out
   '
 }
 
@@ -147,8 +147,8 @@ test_gc_robust_part2() {
 
   test_expect_success "'ipfs repo gc' should be fine now" '
     ipfs repo gc | tee repo_gc_out &&
-    grep -q "removed $HASH2" repo_gc_out &&
-    grep -q "removed $LEAF2" repo_gc_out
+    grep -q "removed $(cid-fmt -b f %M $HASH2)" repo_gc_out &&
+    grep -q "removed $(cid-fmt -b f %M $LEAF2)" repo_gc_out
   '
 }
 

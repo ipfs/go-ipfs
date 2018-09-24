@@ -10,12 +10,28 @@ import (
 	merkledag "gx/ipfs/QmVB15p7qNVQQGC5RQcAQAovDFaQpRNqorbRwpvdNjHmVC/go-merkledag"
 	ipld "gx/ipfs/QmdDXJs4axxefSPgK6Y1QhpJWKuDPnGJiqgq4uncb4rFHL/go-ipld-format"
 	blocks "gx/ipfs/QmegPGspn3RpTMQ23Fd3GVVMopo1zsEMurudbFMZ5UXBLH/go-ipfs-blockstore"
+	//mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 )
 
 // NewBlockstoreProvider returns key provider using bstore.AllKeysChan
 func NewBlockstoreProvider(bstore blocks.Blockstore) KeyChanFunc {
 	return func(ctx context.Context) (<-chan cid.Cid, error) {
-		return bstore.AllKeysChan(ctx)
+		ch, err := bstore.AllKeysChan(ctx)
+		if err != nil {
+			return nil, err
+		}
+		outCh := make(chan cid.Cid) // fixme: buffered
+		go func() {
+			defer close(outCh)
+			for h := range ch {
+				select {
+				case <-ctx.Done():
+					return
+				case outCh <- blocks.CidFromMultihash(h):
+				}
+			}
+		}()
+		return outCh, nil
 	}
 }
 

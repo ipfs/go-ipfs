@@ -37,7 +37,7 @@ test_check_bad_blocks() {
 
   test_expect_success "block shows up in repo verify" '
     test_expect_code 1 ipfs repo verify > verify_out &&
-    grep "$H_BLOCK2" verify_out
+    grep $(cid-fmt -b f %M $H_BLOCK2) verify_out
   '
 }
 

@@ -17,8 +17,8 @@ import (
 	corerepo "github.com/ipfs/go-ipfs/core/corerepo"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
 
-	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	cmds "gx/ipfs/QmPXR4tNdLbp8HsZiPMjpsgqphX9Vhw2J6Jh5MKH2ovW3D/go-ipfs-cmds"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	cmdkit "gx/ipfs/QmSP88ryZkHSRn1fnngAaV2Vcn63WUJzAavnRM9CVdU1Ky/go-ipfs-cmdkit"
 	config "gx/ipfs/QmYVqYJTVjetcf1guieEgWpK1PZtHPytP624vKzTF1P3r2/go-ipfs-config"
 	bstore "gx/ipfs/QmegPGspn3RpTMQ23Fd3GVVMopo1zsEMurudbFMZ5UXBLH/go-ipfs-blockstore"
@@ -47,7 +47,7 @@ var RepoCmd = &cmds.Command{
 
 // GcResult is the result returned by "repo gc" command.
 type GcResult struct {
-	Key   cid.Cid
+	Key   string
 	Error string `json:",omitempty"`
 }
 
@@ -81,15 +81,15 @@ order to reclaim hard disk space.
 					re.Emit(&GcResult{Error: res.Error.Error()})
 					errs = true
 				} else {
-					re.Emit(&GcResult{Key: res.KeyRemoved})
+					re.Emit(&GcResult{Key: res.KeyRemoved.String()})
 				}
 			}
 			if errs {
 				return errors.New("encountered errors during gc run")
 			}
 		} else {
-			err := corerepo.CollectResult(req.Context, gcOutChan, func(k cid.Cid) {
-				re.Emit(&GcResult{Key: k})
+			err := corerepo.CollectResult(req.Context, gcOutChan, func(k mh.Multihash) {
+				re.Emit(&GcResult{Key: k.String()})
 			})
 			if err != nil {
 				return err
@@ -289,11 +289,11 @@ var repoVerifyCmd = &oldcmds.Command{
 		var fails int
 		var i int
 		for k := range keys {
-			_, err := bs.Get(k)
+			_, err := bs.Get(bstore.CidFromMultihash(k))
 			if err != nil {
 				select {
 				case out <- &VerifyProgress{
-					Msg: fmt.Sprintf("block %s was corrupt (%s)", k, err),
+					Msg: fmt.Sprintf("block %s was corrupt (%s)", k.String(), err),
 				}:
 				case <-req.Context().Done():
 					return

@@ -52,13 +52,13 @@ test_cat_get() {
 
 test_gc() {
   test_expect_success "injecting insecure block" '
-    mkdir -p "$IPFS_PATH/blocks/JZ" &&
-    cp -f ../t0275-cid-security-data/AFKSEBCGPUJZE.data "$IPFS_PATH/blocks/JZ"
+    mkdir -p "$IPFS_PATH/blocks/TS" &&
+    cp -f ../t0275-cid-security-data/AFKSEBCGPUJZE.data "$IPFS_PATH/blocks/TS/EICEM7ITSI.data"
   '
 
   test_expect_success "gc works" 'ipfs repo gc > gc_out'
   test_expect_success "gc removed bad block" '
-    grep zDvnoGUyhEq gc_out
+    grep $(cid-fmt -b f %M zDvnoGUyhEq) gc_out
   '
 }
 

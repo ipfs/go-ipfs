@@ -89,8 +89,8 @@ func TestBasicFilestore(t *testing.T) {
 	}
 
 	out := make(map[string]struct{})
-	for c := range kch {
-		out[c.KeyString()] = struct{}{}
+	for k := range kch {
+		out[string(k)] = struct{}{}
 	}
 
 	if len(out) != len(cids) {
@@ -98,7 +98,7 @@ func TestBasicFilestore(t *testing.T) {
 	}
 
 	for _, c := range cids {
-		if _, ok := out[c.KeyString()]; !ok {
+		if _, ok := out[string(c.Hash())]; !ok {
 			t.Fatal("missing cid: ", c)
 		}
 	}
@@ -137,7 +137,7 @@ func TestDeletes(t *testing.T) {
 	_, cids := randomFileAdd(t, fs, dir, 100)
 	todelete := cids[:4]
 	for _, c := range todelete {
-		err := fs.DeleteBlock(c)
+		err := fs.Delete(c.Hash())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -157,8 +157,8 @@ func TestDeletes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for c := range keys {
-		if deleted[c.KeyString()] {
+	for k := range keys {
+		if deleted[string(k)] {
 			t.Fatal("shouldnt have reference to this key anymore")
 		}
 	}

@@ -13,6 +13,7 @@ import (
 
 	posinfo "gx/ipfs/QmPG32VXR5jmpo9q8R9FNdR4Ae97Ky9CiZE6SctJLUB79H/go-ipfs-posinfo"
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	logging "gx/ipfs/QmRREK2CAZ5Re2Bd9zZFG6FeYDppUWt5cMgsoUEp3ktgSr/go-log"
 	blocks "gx/ipfs/QmRcHuYzAyswytBuMF78rj3LTChYszomRFXNg4685ZN1WM/go-block-format"
 	dsq "gx/ipfs/QmSpg1CvpXQQow5ernt1gNBXaXV6yxyNqi7XoeerWfzB5w/go-datastore/query"
@@ -49,7 +50,7 @@ func NewFilestore(bs blockstore.Blockstore, fm *FileManager) *Filestore {
 
 // AllKeysChan returns a channel from which to read the keys stored in
 // the blockstore. If the given context is cancelled the channel will be closed.
-func (f *Filestore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, error) {
+func (f *Filestore) AllKeysChan(ctx context.Context) (<-chan mh.Multihash, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	a, err := f.bs.AllKeysChan(ctx)
@@ -58,7 +59,7 @@ func (f *Filestore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, error) {
 		return nil, err
 	}
 
-	out := make(chan cid.Cid, dsq.KeysOnlyBufSize)
+	out := make(chan mh.Multihash, dsq.KeysOnlyBufSize)
 	go func() {
 		defer cancel()
 		defer close(out)
@@ -115,13 +116,13 @@ func (f *Filestore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, error) {
 // blockstore. As expected, in the case of FileManager blocks, only the
 // reference is deleted, not its contents. It may return
 // ErrNotFound when the block is not stored.
-func (f *Filestore) DeleteBlock(c cid.Cid) error {
-	err1 := f.bs.DeleteBlock(c)
+func (f *Filestore) Delete(c mh.Multihash) error {
+	err1 := f.bs.Delete(c)
 	if err1 != nil && err1 != blockstore.ErrNotFound {
 		return err1
 	}
 
-	err2 := f.fm.DeleteBlock(c)
+	err2 := f.fm.Delete(c)
 	// if we successfully removed something from the blockstore, but the
 	// filestore didnt have it, return success
 
@@ -154,7 +155,7 @@ func (f *Filestore) Get(c cid.Cid) (blocks.Block, error) {
 
 // GetSize returns the size of the requested block. It may return ErrNotFound
 // when the block is not stored.
-func (f *Filestore) GetSize(c cid.Cid) (int, error) {
+func (f *Filestore) GetSize(c mh.Multihash) (int, error) {
 	size, err := f.bs.GetSize(c)
 	switch err {
 	case nil:
@@ -168,7 +169,7 @@ func (f *Filestore) GetSize(c cid.Cid) (int, error) {
 
 // Has returns true if the block with the given Cid is
 // stored in the Filestore.
-func (f *Filestore) Has(c cid.Cid) (bool, error) {
+func (f *Filestore) Has(c mh.Multihash) (bool, error) {
 	has, err := f.bs.Has(c)
 	if err != nil {
 		return false, err
@@ -186,7 +187,7 @@ func (f *Filestore) Has(c cid.Cid) (bool, error) {
 // delegated to the FileManager, while the rest of blocks
 // are handled by the regular blockstore.
 func (f *Filestore) Put(b blocks.Block) error {
-	has, err := f.Has(b.Cid())
+	has, err := f.Has(b.Cid().Hash())
 	if err != nil {
 		return err
 	}
@@ -210,7 +211,7 @@ func (f *Filestore) PutMany(bs []blocks.Block) error {
 	var fstores []*posinfo.FilestoreNode
 
 	for _, b := range bs {
-		has, err := f.Has(b.Cid())
+		has, err := f.Has(b.Cid().Hash())
 		if err != nil {
 			return err
 		}

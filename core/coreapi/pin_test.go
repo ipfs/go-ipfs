@@ -176,7 +176,7 @@ func TestPinRecursive(t *testing.T) {
 		t.Errorf("unexpected verify result count: %d", n)
 	}
 
-	err = nd.Blockstore.DeleteBlock(p0.Cid())
+	err = nd.Blockstore.Delete(p0.Cid().Hash())
 	if err != nil {
 		t.Fatal(err)
 	}

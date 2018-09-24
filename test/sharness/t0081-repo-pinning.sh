@@ -209,9 +209,9 @@ test_expect_success "pin lists look good" '
 
 test_expect_success "'ipfs repo gc' succeeds" '
   ipfs repo gc >gc_out_actual2 &&
-  echo "removed $HASH_FILE3" > gc_out_exp2 &&
-  echo "removed $HASH_FILE5" >> gc_out_exp2 &&
-  echo "removed $HASH_DIR3" >> gc_out_exp2 &&
+  echo "removed $(cid-fmt -b f %M $HASH_FILE3)" > gc_out_exp2 &&
+  echo "removed $(cid-fmt -b f %M $HASH_FILE5)" >> gc_out_exp2 &&
+  echo "removed $(cid-fmt -b f %M $HASH_DIR3)" >> gc_out_exp2 &&
   test_includes_lines gc_out_exp2 gc_out_actual2
 '
 

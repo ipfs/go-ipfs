@@ -12,6 +12,7 @@ import (
 	bserv "gx/ipfs/QmWAU1Etv448cx9GLohtr27vnVC87amqE7fN4Hf4hcLDQY/go-blockservice"
 
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	logging "gx/ipfs/QmRREK2CAZ5Re2Bd9zZFG6FeYDppUWt5cMgsoUEp3ktgSr/go-log"
 	dstore "gx/ipfs/QmSpg1CvpXQQow5ernt1gNBXaXV6yxyNqi7XoeerWfzB5w/go-datastore"
 	"gx/ipfs/QmVkMRSkXrpjqrroEXWuYBvDBnXCdMMY6gsKicBGVGUqKT/go-verifcid"
@@ -25,7 +26,7 @@ var log = logging.Logger("gc")
 // Result represents an incremental output from a garbage collection
 // run.  It contains either an error, or the cid of a removed object.
 type Result struct {
-	KeyRemoved cid.Cid
+	KeyRemoved mh.Multihash
 	Error      error
 }
 
@@ -82,6 +83,12 @@ func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn 
 		errors := false
 		var removed uint64
 
+		hashes := map[string]struct{}{}
+		for _, c := range gcs.Keys() {
+			hashes[string(c.Hash())] = struct{}{}
+		}
+		gcs = nil // to allow it to be gc to save space
+
 	loop:
 		for {
 			select {
@@ -89,8 +96,8 @@ func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn 
 				if !ok {
 					break loop
 				}
-				if !gcs.Has(k) {
-					err := bs.DeleteBlock(k)
+				if _, ok := hashes[string(k)]; !ok {
+					err := bs.Delete(k)
 					removed++
 					if err != nil {
 						errors = true
@@ -277,12 +284,13 @@ func (e *CannotFetchLinksError) Error() string {
 // blocks could not be deleted and can appear as a Result in the GC output
 // channel.
 type CannotDeleteBlockError struct {
-	Key cid.Cid
+	Key mh.Multihash
 	Err error
 }
 
 // Error implements the error interface for this type with a
 // useful message.
 func (e *CannotDeleteBlockError) Error() string {
-	return fmt.Sprintf("could not remove %s: %s", e.Key, e.Err)
+	// FIXME: How should we display a multihash, for now use mh.String() which is a hex string
+	return fmt.Sprintf("could not remove %s: %s", e.Key.String(), e.Err)
 }

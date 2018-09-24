@@ -203,8 +203,8 @@ var dupsFileStore = &oldCmds.Command{
 
 		go func() {
 			defer close(out)
-			for cid := range ch {
-				have, err := fs.MainBlockstore().Has(cid)
+			for h := range ch {
+				have, err := fs.MainBlockstore().Has(h)
 				if err != nil {
 					select {
 					case out <- &RefWrapper{Err: err.Error()}:
@@ -213,8 +213,9 @@ var dupsFileStore = &oldCmds.Command{
 					return
 				}
 				if have {
+					c := cid.NewCidV1(cid.Raw, h)
 					select {
-					case out <- &RefWrapper{Ref: cid.String()}:
+					case out <- &RefWrapper{Ref: c.String()}:
 					case <-req.Context().Done():
 						return
 					}
