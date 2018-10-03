@@ -150,6 +150,10 @@ test_expect_success "'ipfs ls --resolve-type=false ' ok" '
   ipfs ls --resolve-type=false $DIR > /dev/null
 '
 
+test_expect_success "'ipfs ls --resolve=local ' ok" '
+  ipfs ls --resolve=local $DIR > /dev/null
+'
+
 test_expect_success "'ipfs ls' fails" '
   test_must_fail ipfs ls $DIR
 '
@@ -158,6 +162,10 @@ test_launch_ipfs_daemon --offline
 
 test_expect_success "'ipfs ls --resolve-type=false' ok" '
   ipfs ls --resolve-type=false $DIR > /dev/null
+'
+
+test_expect_success "'ipfs ls --resolve=local' ok" '
+  ipfs ls --resolve=local $DIR > /dev/null
 '
 
 test_expect_success "'ipfs ls' fails" '
@@ -176,6 +184,34 @@ test_launch_ipfs_daemon
 test_expect_success "'ipfs ls --resolve-type=false' ok and does not hang" '
   go-timeout 2 ipfs ls --resolve-type=false $DIR
 '
+
+test_expect_success "'ipfs ls --resolve-type=false' ok and does not hang" '
+  go-timeout 2 ipfs ls --resolve=local $DIR
+'
+
+test_expect_success "'ipfs ls --quiet <three dir hashes>' succeeds" '
+    ipfs ls --quiet QmfNy183bXiRVyrhyWtq3TwHn79yHEkiAGFr18P7YNzESj QmR3jhV4XpxxPjPT3Y8vNnWvWNvakdcT3H6vqpRBsX1MLy QmSix55yz8CzWXf5ZVM9vgEvijnEeeXiTSarVtsqiiCJss >actual_ls_quiet
+  '
+
+test_expect_success "'ipfs ls --quiet <three dir hashes>' output looks good" '
+    cat <<-\EOF >expected_ls_quiet &&
+QmfNy183bXiRVyrhyWtq3TwHn79yHEkiAGFr18P7YNzESj:
+d1/
+d2/
+f1
+f2
+
+QmR3jhV4XpxxPjPT3Y8vNnWvWNvakdcT3H6vqpRBsX1MLy:
+1024
+a
+
+QmSix55yz8CzWXf5ZVM9vgEvijnEeeXiTSarVtsqiiCJss:
+128
+a
+
+EOF
+    test_cmp expected_ls_quiet actual_ls_quiet
+  '
 
 test_kill_ipfs_daemon
 

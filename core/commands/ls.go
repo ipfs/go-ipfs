@@ -36,6 +36,14 @@ type LsOutput struct {
 	Objects []LsObject
 }
 
+const (
+	resolveLocal  = "local"
+	resolveAlways = "always"
+	resolveNever  = "never"
+)
+
+var errInvalidResolveType = fmt.Errorf("type must be '%s', '%s' or '%s'", resolveAlways, resolveLocal, resolveNever)
+
 var LsCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List directory contents for Unix filesystem objects.",
@@ -46,6 +54,10 @@ the following format:
   <link base58 hash> <link size in bytes> <link name>
 
 The JSON output contains type information.
+
+The '--resolve' option specifies whether to include the type of each linked object.
+If 'local', types are only determined for hashes that are pinned or in your local cache.
+Note: setting it to 'always' can be VERY slow.
 `,
 	},
 
@@ -54,7 +66,9 @@ The JSON output contains type information.
 	},
 	Options: []cmdkit.Option{
 		cmdkit.BoolOption("headers", "v", "Print table headers (Hash, Size, Name)."),
-		cmdkit.BoolOption("resolve-type", "Resolve linked objects to find out their types.").WithDefault(true),
+		cmdkit.BoolOption("resolve-type", "Resolve linked objects to find out their types. Note: this option is deprecated, use --type instead."),
+		cmdkit.BoolOption(quietOptionName, "q", "Write only names."),
+		cmdkit.StringOption("resolve", "Include the type of each linked object (always|local|never).").WithDefault(resolveAlways),
 	},
 	Run: func(req cmds.Request, res cmds.Response) {
 		nd, err := req.InvocContext().GetNode()
@@ -75,14 +89,26 @@ The JSON output contains type information.
 			return
 		}
 
-		resolve, _, err := req.Option("resolve-type").Bool()
+		rtype, _, _ := req.Option("resolve").String()
+		if rtype != resolveAlways && rtype != resolveLocal && rtype != resolveNever {
+			res.SetError(errInvalidResolveType, cmdkit.ErrClient)
+			return
+		}
+		resolve, defined, err := req.Option("resolve-type").Bool()
 		if err != nil {
 			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
+		if defined {
+			if resolve {
+				rtype = resolveAlways
+			} else {
+				rtype = resolveLocal
+			}
+		}
 
 		dserv := nd.DAG
-		if !resolve {
+		if rtype == resolveLocal {
 			offlineexch := offline.Exchange(nd.Blockstore)
 			bserv := blockservice.New(nd.Blockstore, offlineexch)
 			dserv = merkledag.NewDAGService(bserv)
@@ -110,6 +136,7 @@ The JSON output contains type information.
 		ng := merkledag.NewSession(req.Context(), nd.DAG)
 		ro := merkledag.NewReadOnlyDagService(ng)
 
+		quiet, _, _ := req.Option(quietOptionName).Bool()
 		for i, dagnode := range dagnodes {
 			dir, err := uio.NewDirectoryFromNode(ro, dagnode)
 			if err != nil && err != uio.ErrNotADir {
@@ -141,8 +168,11 @@ The JSON output contains type information.
 					// No need to check with raw leaves
 					t = unixfs.TFile
 				case cid.DagProtobuf:
+					if rtype == resolveNever {
+						break
+					}
 					linkNode, err := link.GetNode(req.Context(), dserv)
-					if err == ipld.ErrNotFound && !resolve {
+					if err == ipld.ErrNotFound && rtype == resolveLocal {
 						// not an error
 						linkNode = nil
 					} else if err != nil {
@@ -161,9 +191,11 @@ The JSON output contains type information.
 				}
 				output[i].Links[j] = LsLink{
 					Name: link.Name,
-					Hash: link.Cid.String(),
 					Size: link.Size,
 					Type: t,
+				}
+				if !quiet {
+					output[i].Links[j].Hash = link.Cid.String()
 				}
 			}
 		}
@@ -178,6 +210,7 @@ The JSON output contains type information.
 				return nil, err
 			}
 
+			quiet, _, _ := res.Request().Option(quietOptionName).Bool()
 			headers, _, _ := res.Request().Option("headers").Bool()
 			output, ok := v.(*LsOutput)
 			if !ok {
@@ -191,13 +224,21 @@ The JSON output contains type information.
 					fmt.Fprintf(w, "%s:\n", object.Hash)
 				}
 				if headers {
-					fmt.Fprintln(w, "Hash\tSize\tName")
+					if quiet {
+						fmt.Fprintln(w, "Name")
+					} else {
+						fmt.Fprintln(w, "Hash\tSize\tName")
+					}
 				}
 				for _, link := range object.Links {
 					if link.Type == unixfs.TDirectory {
 						link.Name += "/"
 					}
-					fmt.Fprintf(w, "%s\t%v\t%s\n", link.Hash, link.Size, link.Name)
+					if quiet {
+						fmt.Fprintln(w, link.Name)
+					} else {
+						fmt.Fprintf(w, "%s\t%v\t%s\n", link.Hash, link.Size, link.Name)
+					}
 				}
 				if len(output.Objects) > 1 {
 					fmt.Fprintln(w)
