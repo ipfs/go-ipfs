@@ -47,6 +47,7 @@ type AddPinOutput struct {
 }
 
 const (
+	pinForceOptionName     = "force"
 	pinRecursiveOptionName = "recursive"
 	pinProgressOptionName  = "progress"
 )
@@ -193,6 +194,7 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 		cmdkit.StringArg("ipfs-path", true, true, "Path to object(s) to be unpinned.").EnableStdin(),
 	},
 	Options: []cmdkit.Option{
+		cmdkit.BoolOption(pinForceOptionName, "f", "Ignore nonexistent pins"),
 		cmdkit.BoolOption(pinRecursiveOptionName, "r", "Recursively unpin the object linked to by the specified object(s).").WithDefault(true),
 	},
 	Type: PinOutput{},
@@ -216,7 +218,18 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 			return
 		}
 
+		force, _, err := req.Option(pinForceOptionName).Bool()
+		if err != nil {
+			res.SetError(err, cmdkit.ErrNormal)
+			return
+		}
+
 		removed, err := corerepo.Unpin(n, api, req.Context(), req.Arguments(), recursive)
+		if force && err == pin.ErrNotPinned {
+			res.SetOutput(nil)
+			return
+		}
+
 		if err != nil {
 			res.SetError(err, cmdkit.ErrNormal)
 			return

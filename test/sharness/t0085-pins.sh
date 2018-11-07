@@ -8,6 +8,7 @@ test_description="Test ipfs pinning operations"
 
 . lib/test-lib.sh
 
+RANDOM_HASH=Qme8uX5n9hn15pw9p6WcVKoziyyC9LXv4LEgvsmKMULjnV
 
 test_pins() {
   EXTRA_ARGS=$1
@@ -19,7 +20,8 @@ test_pins() {
     HASH_D=$(echo "D" | ipfs add -q --pin=false) &&
     HASH_E=$(echo "E" | ipfs add -q --pin=false) &&
     HASH_F=$(echo "F" | ipfs add -q --pin=false) &&
-    HASH_G=$(echo "G" | ipfs add -q --pin=false)
+    HASH_G=$(echo "G" | ipfs add -q --pin=false) &&
+    HASH_TEST_UNPIN=$(echo "unpin" | ipfs add -q)
   '
 
   test_expect_success "put all those hashes in a file" '
@@ -56,6 +58,10 @@ test_pins() {
     cat hashes | ipfs pin rm
   '
 
+  test_expect_success "unpin non-existent hashes with force option" '
+    ipfs pin rm --force $RANDOM_HASH $HASH_TEST_UNPIN $RANDOM_HASH
+  '
+
   test_expect_success "test pin update" '
     ipfs pin add "$HASH_A" &&
     ipfs pin ls > before_update &&
@@ -68,8 +74,6 @@ test_pins() {
     ipfs pin rm "$HASH_B"
   '
 }
-
-RANDOM_HASH=Qme8uX5n9hn15pw9p6WcVKoziyyC9LXv4LEgvsmKMULjnV
 
 test_pins_error_reporting() {
   EXTRA_ARGS=$1
