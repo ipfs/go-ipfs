@@ -47,16 +47,16 @@ EOF
 QmfNy183bXiRVyrhyWtq3TwHn79yHEkiAGFr18P7YNzESj:
 QmSix55yz8CzWXf5ZVM9vgEvijnEeeXiTSarVtsqiiCJss 246  d1/
 QmR3jhV4XpxxPjPT3Y8vNnWvWNvakdcT3H6vqpRBsX1MLy 1143 d2/
-QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH 13   f1
-QmNtocSs7MoDkJMc1RkyisCSKvLadujPsfJfSdJ3e1eA1M 13   f2
+QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH 5    f1
+QmNtocSs7MoDkJMc1RkyisCSKvLadujPsfJfSdJ3e1eA1M 5    f2
 
 QmR3jhV4XpxxPjPT3Y8vNnWvWNvakdcT3H6vqpRBsX1MLy:
-QmbQBUSRL9raZtNXfpTDeaxQapibJEG6qEY8WqAN22aUzd 1035 1024
-QmaRGe7bVmVaLmxbrMiVNXqW4pRNNp3xq7hFtyRKA3mtJL 14   a
+QmbQBUSRL9raZtNXfpTDeaxQapibJEG6qEY8WqAN22aUzd 1024 1024
+QmaRGe7bVmVaLmxbrMiVNXqW4pRNNp3xq7hFtyRKA3mtJL 6    a
 
 QmSix55yz8CzWXf5ZVM9vgEvijnEeeXiTSarVtsqiiCJss:
-QmQNd6ubRXaNG6Prov8o6vk3bn6eWsj9FxLGrAVDUAGkGe 139 128
-QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN 14  a
+QmQNd6ubRXaNG6Prov8o6vk3bn6eWsj9FxLGrAVDUAGkGe 128 128
+QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN 6   a
 
 EOF
     test_cmp expected_ls actual_ls
@@ -72,18 +72,18 @@ QmfNy183bXiRVyrhyWtq3TwHn79yHEkiAGFr18P7YNzESj:
 Hash                                           Size Name
 QmSix55yz8CzWXf5ZVM9vgEvijnEeeXiTSarVtsqiiCJss 246  d1/
 QmR3jhV4XpxxPjPT3Y8vNnWvWNvakdcT3H6vqpRBsX1MLy 1143 d2/
-QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH 13   f1
-QmNtocSs7MoDkJMc1RkyisCSKvLadujPsfJfSdJ3e1eA1M 13   f2
+QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH 5    f1
+QmNtocSs7MoDkJMc1RkyisCSKvLadujPsfJfSdJ3e1eA1M 5    f2
 
 QmR3jhV4XpxxPjPT3Y8vNnWvWNvakdcT3H6vqpRBsX1MLy:
 Hash                                           Size Name
-QmbQBUSRL9raZtNXfpTDeaxQapibJEG6qEY8WqAN22aUzd 1035 1024
-QmaRGe7bVmVaLmxbrMiVNXqW4pRNNp3xq7hFtyRKA3mtJL 14   a
+QmbQBUSRL9raZtNXfpTDeaxQapibJEG6qEY8WqAN22aUzd 1024 1024
+QmaRGe7bVmVaLmxbrMiVNXqW4pRNNp3xq7hFtyRKA3mtJL 6    a
 
 QmSix55yz8CzWXf5ZVM9vgEvijnEeeXiTSarVtsqiiCJss:
 Hash                                           Size Name
-QmQNd6ubRXaNG6Prov8o6vk3bn6eWsj9FxLGrAVDUAGkGe 139  128
-QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN 14   a
+QmQNd6ubRXaNG6Prov8o6vk3bn6eWsj9FxLGrAVDUAGkGe 128  128
+QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN 6    a
 
 EOF
     test_cmp expected_ls_headers actual_ls_headers
@@ -105,8 +105,8 @@ test_ls_object() {
   test_expect_success "ipfs add medium size file then 'ipfs ls' works as expected" '
     random 500000 2 > somefile &&
     HASH=$(ipfs add somefile -q) &&
-    echo "QmPrM8S5T7Q3M8DQvQMS7m41m3Aq4jBjzAzvky5fH3xfr4 262158 " > ls-expect &&
-    echo "QmdaAntAzQqqVMo4B8V69nkQd5d918YjHXUe2oF6hr72ri 237870 " >> ls-expect &&
+    echo "QmPrM8S5T7Q3M8DQvQMS7m41m3Aq4jBjzAzvky5fH3xfr4 262144 " > ls-expect &&
+    echo "QmdaAntAzQqqVMo4B8V69nkQd5d918YjHXUe2oF6hr72ri 237856 " >> ls-expect &&
     ipfs ls $HASH > ls-actual &&
     test_cmp ls-actual ls-expect
   '
