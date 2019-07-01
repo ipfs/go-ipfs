@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/ipfs/go-ipfs/repo"
-
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/mount"
 	dssync "github.com/ipfs/go-datastore/sync"
@@ -27,7 +25,7 @@ type DatastoreConfig interface {
 	DiskSpec() DiskSpec
 
 	// Create instantiate a new datastore from this config
-	Create(path string) (repo.Datastore, error)
+	Create(path string) (ds.Batching, error)
 }
 
 // DiskSpec is a minimal representation of the characteristic values of the
@@ -148,7 +146,7 @@ func (c *mountDatastoreConfig) DiskSpec() DiskSpec {
 	return cfg
 }
 
-func (c *mountDatastoreConfig) Create(path string) (repo.Datastore, error) {
+func (c *mountDatastoreConfig) Create(path string) (ds.Batching, error) {
 	mounts := make([]mount.Mount, len(c.mounts))
 	for i, m := range c.mounts {
 		ds, err := m.ds.Create(path)
@@ -174,7 +172,7 @@ func (c *memDatastoreConfig) DiskSpec() DiskSpec {
 	return nil
 }
 
-func (c *memDatastoreConfig) Create(string) (repo.Datastore, error) {
+func (c *memDatastoreConfig) Create(string) (ds.Batching, error) {
 	return dssync.MutexWrap(ds.NewMapDatastore()), nil
 }
 
@@ -201,7 +199,7 @@ func LogDatastoreConfig(params map[string]interface{}) (DatastoreConfig, error) 
 
 }
 
-func (c *logDatastoreConfig) Create(path string) (repo.Datastore, error) {
+func (c *logDatastoreConfig) Create(path string) (ds.Batching, error) {
 	child, err := c.child.Create(path)
 	if err != nil {
 		return nil, err
@@ -239,7 +237,7 @@ func (c *measureDatastoreConfig) DiskSpec() DiskSpec {
 	return c.child.DiskSpec()
 }
 
-func (c measureDatastoreConfig) Create(path string) (repo.Datastore, error) {
+func (c measureDatastoreConfig) Create(path string) (ds.Batching, error) {
 	child, err := c.child.Create(path)
 	if err != nil {
 		return nil, err

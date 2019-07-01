@@ -1,11 +1,8 @@
 package main
 
 import (
-	"errors"
 	_ "expvar"
 	"fmt"
-	"net"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
@@ -20,10 +17,8 @@ import (
 	coreapi "github.com/ipfs/go-ipfs/core/coreapi"
 	corehttp "github.com/ipfs/go-ipfs/core/corehttp"
 	corerepo "github.com/ipfs/go-ipfs/core/corerepo"
-	libp2p "github.com/ipfs/go-ipfs/core/node/libp2p"
 	nodeMount "github.com/ipfs/go-ipfs/fuse/node"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
-	migrate "github.com/ipfs/go-ipfs/repo/fsrepo/migrations"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/ipfs/go-ipfs-cmds"
@@ -35,29 +30,27 @@ import (
 )
 
 const (
-	adjustFDLimitKwd          = "manage-fdlimit"
-	enableGCKwd               = "enable-gc"
-	initOptionKwd             = "init"
-	initProfileOptionKwd      = "init-profile"
-	ipfsMountKwd              = "mount-ipfs"
-	ipnsMountKwd              = "mount-ipns"
-	migrateKwd                = "migrate"
-	mountKwd                  = "mount"
-	offlineKwd                = "offline" // global option
-	routingOptionKwd          = "routing"
-	routingOptionSupernodeKwd = "supernode"
+	adjustFDLimitKwd         = "manage-fdlimit"
+	enableGCKwd              = "enable-gc"
+	initOptionKwd            = "init"
+	initProfileOptionKwd     = "init-profile"
+	ipfsMountKwd             = "mount-ipfs"
+	ipnsMountKwd             = "mount-ipns"
+	migrateKwd               = "migrate"
+	mountKwd                 = "mount"
+	offlineKwd               = "offline" // global option
+	routingOptionKwd         = "routing"
+	unencryptTransportKwd    = "disable-transport-encryption"
+	unrestrictedApiAccessKwd = "unrestricted-api"
+	writableKwd              = "writable"
+	enablePubSubKwd          = "enable-pubsub-experiment"
+	enableIPNSPubSubKwd      = "enable-namesys-pubsub"
+	enableMultiplexKwd       = "enable-mplex-experiment"
+
 	routingOptionDHTClientKwd = "dhtclient"
 	routingOptionDHTKwd       = "dht"
 	routingOptionNoneKwd      = "none"
 	routingOptionDefaultKwd   = "default"
-	unencryptTransportKwd     = "disable-transport-encryption"
-	unrestrictedApiAccessKwd  = "unrestricted-api"
-	writableKwd               = "writable"
-	enablePubSubKwd           = "enable-pubsub-experiment"
-	enableIPNSPubSubKwd       = "enable-namesys-pubsub"
-	enableMultiplexKwd        = "enable-mplex-experiment"
-	// apiAddrKwd    = "address-api"
-	// swarmAddrKwd  = "address-swarm"
 )
 
 var daemonCmd = &cmds.Command{
@@ -168,24 +161,9 @@ Headers.
 		cmds.BoolOption(enablePubSubKwd, "Instantiate the ipfs daemon with the experimental pubsub feature enabled."),
 		cmds.BoolOption(enableIPNSPubSubKwd, "Enable IPNS record distribution through pubsub; enables pubsub."),
 		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
-
-		// TODO: add way to override addresses. tricky part: updating the config if also --init.
-		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
-		// cmds.StringOption(swarmAddrKwd, "Address for the swarm socket (overrides config)"),
 	},
 	Subcommands: map[string]*cmds.Command{},
 	Run:         daemonFunc,
-}
-
-// defaultMux tells mux to serve path using the default muxer. This is
-// mostly useful to hook up things that register in the default muxer,
-// and don't provide a convenient http.Handler entry point, such as
-// expvar and http/pprof.
-func defaultMux(path string) corehttp.ServeOption {
-	return func(node *core.IpfsNode, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
-		mux.Handle(path, http.DefaultServeMux)
-		return mux, nil
-	}
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
@@ -219,125 +197,47 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	cctx := env.(*oldcmds.Context)
 
-	// check transport encryption flag.
-	unencrypted, _ := req.Options[unencryptTransportKwd].(bool)
-	if unencrypted {
-		log.Warningf(`Running with --%s: All connections are UNENCRYPTED.
-		You will not be able to connect to regular encrypted networks.`, unencryptTransportKwd)
-	}
-
 	// first, whether user has provided the initialization flag. we may be
 	// running in an uninitialized state.
 	initialize, _ := req.Options[initOptionKwd].(bool)
 	if initialize {
-
-		cfg := cctx.ConfigRoot
-		if !fsrepo.IsInitialized(cfg) {
+		if !fsrepo.IsInitialized(cctx.RepoPath) {
 			profiles, _ := req.Options[initProfileOptionKwd].(string)
 
-			err := initWithDefaults(os.Stdout, cfg, profiles)
+			err := initWithDefaults(os.Stdout, cctx.RepoPath, profiles)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	// acquire the repo lock _before_ constructing a node. we need to make
-	// sure we are permitted to access the resources (datastore, etc.)
-	repo, err := fsrepo.Open(cctx.ConfigRoot)
-	switch err {
-	default:
-		return err
-	case fsrepo.ErrNeedMigration:
-		domigrate, found := req.Options[migrateKwd].(bool)
-		fmt.Println("Found outdated fs-repo, migrations need to be run.")
+	builder := &nodeBuilder{
+		ctx:      req.Context,
+		repoPath: cctx.RepoPath,
 
-		if !found {
-			domigrate = YesNoPrompt("Run migrations now? [y/N]")
-		}
-
-		if !domigrate {
-			fmt.Println("Not running migrations of fs-repo now.")
-			fmt.Println("Please get fs-repo-migrations from https://dist.ipfs.io")
-			return fmt.Errorf("fs-repo requires migration")
-		}
-
-		err = migrate.RunMigration(fsrepo.RepoVersion)
-		if err != nil {
-			fmt.Println("The migrations of fs-repo failed:")
-			fmt.Printf("  %s\n", err)
-			fmt.Println("If you think this is a bug, please file an issue and include this whole log output.")
-			fmt.Println("  https://github.com/ipfs/fs-repo-migrations")
-			return err
-		}
-
-		repo, err = fsrepo.Open(cctx.ConfigRoot)
-		if err != nil {
-			return err
-		}
-	case nil:
-		break
+		permanent: true,
+		daemon:    true,
 	}
 
-	// The node will also close the repo but there are many places we could
-	// fail before we get to that. It can't hurt to close it twice.
-	defer repo.Close()
+	builder.unencrypted, _ = req.Options[unencryptTransportKwd].(bool)
+	builder.migrate, builder.userMigrate = req.Options[migrateKwd].(bool)
+
+	builder.routing, _ = req.Options[routingOptionKwd].(string)
 
 	cfg, err := cctx.GetConfig()
 	if err != nil {
 		return err
 	}
 
-	offline, _ := req.Options[offlineKwd].(bool)
-	ipnsps, _ := req.Options[enableIPNSPubSubKwd].(bool)
-	pubsub, _ := req.Options[enablePubSubKwd].(bool)
-	mplex, _ := req.Options[enableMultiplexKwd].(bool)
+	builder.offline, _ = req.Options[offlineKwd].(bool)
+	builder.ipnsps, _ = req.Options[enableIPNSPubSubKwd].(bool)
+	builder.pubsub, _ = req.Options[enablePubSubKwd].(bool)
+	builder.mplex, _ = req.Options[enableMultiplexKwd].(bool)
 
-	// Start assembling node config
-	ncfg := &core.BuildCfg{
-		Repo:                        repo,
-		Permanent:                   true, // It is temporary way to signify that node is permanent
-		Online:                      !offline,
-		DisableEncryptedConnections: unencrypted,
-		ExtraOpts: map[string]bool{
-			"pubsub": pubsub,
-			"ipnsps": ipnsps,
-			"mplex":  mplex,
-		},
-		//TODO(Kubuxu): refactor Online vs Offline by adding Permanent vs Ephemeral
-	}
-
-	routingOption, _ := req.Options[routingOptionKwd].(string)
-	if routingOption == routingOptionDefaultKwd {
-		cfg, err := repo.Config()
-		if err != nil {
-			return err
-		}
-
-		routingOption = cfg.Routing.Type
-		if routingOption == "" {
-			routingOption = routingOptionDHTKwd
-		}
-	}
-	switch routingOption {
-	case routingOptionSupernodeKwd:
-		return errors.New("supernode routing was never fully implemented and has been removed")
-	case routingOptionDHTClientKwd:
-		ncfg.Routing = libp2p.DHTClientOption
-	case routingOptionDHTKwd:
-		ncfg.Routing = libp2p.DHTOption
-	case routingOptionNoneKwd:
-		ncfg.Routing = libp2p.NilRouterOption
-	default:
-		return fmt.Errorf("unrecognized routing option: %s", routingOption)
-	}
-
-	node, err := core.NewNode(req.Context, ncfg)
+	node, err := builder.buildNode()
 	if err != nil {
-		log.Error("error from node construction: ", err)
 		return err
 	}
-	node.IsDaemon = true
 
 	if node.PNetFingerprint != nil {
 		fmt.Println("Swarm is limited to private network of peers with the swarm key")
@@ -349,7 +249,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	defer func() {
 		// We wait for the node to close first, as the node has children
 		// that it will wait for before closing, such as the API server.
-		node.Close()
+		node.Close() //TODO: errors?
 
 		select {
 		case <-req.Context.Done():
@@ -382,7 +282,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// construct fuse mountpoints - if the user provided the --mount flag
 	mount, _ := req.Options[mountKwd].(bool)
-	if mount && offline {
+	if mount && builder.offline {
 		return cmds.Errorf(cmds.ErrClient, "mount is not currently supported in offline mode")
 	}
 	if mount {
@@ -483,8 +383,8 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		corehttp.WebUIOption,
 		gatewayOpt,
 		corehttp.VersionOption(),
-		defaultMux("/debug/vars"),
-		defaultMux("/debug/pprof/"),
+		corehttp.DefaultMux("/debug/vars"),
+		corehttp.DefaultMux("/debug/pprof/"),
 		corehttp.MutexFractionOption("/debug/pprof-mutex/"),
 		corehttp.MetricsScrapingOption("/debug/metrics/prometheus"),
 		corehttp.LogOption(),

@@ -11,16 +11,16 @@ import (
 	"time"
 
 	version "github.com/ipfs/go-ipfs"
-	core "github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
-	namesys "github.com/ipfs/go-ipfs/namesys"
-	repo "github.com/ipfs/go-ipfs/repo"
+	"github.com/ipfs/go-ipfs/namesys"
+	"github.com/ipfs/go-ipfs/repo"
 
-	datastore "github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
 	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
-	path "github.com/ipfs/go-path"
+	"github.com/ipfs/go-path"
 	iface "github.com/ipfs/interface-go-ipfs-core"
 	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 	ipath "github.com/ipfs/interface-go-ipfs-core/path"
@@ -89,11 +89,18 @@ func newNodeWithMockNamesys(ns mockNamesys) (*core.IpfsNode, error) {
 		C: c,
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
 	}
-	n, err := core.NewNode(context.Background(), &core.BuildCfg{Repo: r})
+	api, err := coreapi.New(
+		coreapi.Ctx(context.Background()),
+
+		coreapi.Repo(r, coreapi.ParseConfig()),
+		coreapi.Override(coreapi.Namesys, func() namesys.NameSystem { return ns }),
+	)
 	if err != nil {
 		return nil, err
 	}
-	n.Namesys = ns
+	// nolint
+	n := api.Node()
+
 	return n, nil
 }
 

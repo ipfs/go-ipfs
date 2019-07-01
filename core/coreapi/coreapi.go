@@ -81,13 +81,13 @@ type CoreAPI struct {
 }
 
 // NewCoreAPI creates new instance of IPFS CoreAPI backed by go-ipfs Node.
-func NewCoreAPI(n *core.IpfsNode, opts ...options.ApiOption) (coreiface.CoreAPI, error) {
+func NewCoreAPI(n *core.IpfsNode, opts ...options.ApiOption) (*CoreAPI, error) {
 	parentOpts, err := options.ApiOptions()
 	if err != nil {
 		return nil, err
 	}
 
-	return (&CoreAPI{nd: n, parentOpts: *parentOpts}).WithOptions(opts...)
+	return (&CoreAPI{nd: n, parentOpts: *parentOpts}).withOptions(opts...)
 }
 
 // Unixfs returns the UnixfsAPI interface implementation backed by the go-ipfs node
@@ -145,6 +145,10 @@ func (api *CoreAPI) PubSub() coreiface.PubSubAPI {
 
 // WithOptions returns api with global options applied
 func (api *CoreAPI) WithOptions(opts ...options.ApiOption) (coreiface.CoreAPI, error) {
+	return api.withOptions(opts...)
+}
+
+func (api *CoreAPI) withOptions(opts ...options.ApiOption) (*CoreAPI, error) {
 	settings := api.parentOpts // make sure to copy
 	_, err := options.ApiOptionsTo(&settings, opts...)
 	if err != nil {
@@ -230,6 +234,18 @@ func (api *CoreAPI) WithOptions(opts ...options.ApiOption) (coreiface.CoreAPI, e
 	}
 
 	return subApi, nil
+}
+
+// Node returns the underlying ipfs node object. Don't use unless absolutely
+// necessary. Options applied to CoreAPI won't apply to node returned form this
+// method.
+//
+// If you need to use this method because some functionality is missing from the
+// CoreAPI interfaces, please file an issue in https://github.com/ipfs/go-ipfs/
+//
+// Deprecated: This method will eventually be removed
+func (api *CoreAPI) Node() *core.IpfsNode {
+	return api.nd
 }
 
 // getSession returns new api backed by the same node with a read-only session DAG

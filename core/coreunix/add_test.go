@@ -1,8 +1,9 @@
-package coreunix
+package coreunix_test
 
 import (
 	"bytes"
 	"context"
+	"github.com/ipfs/go-ipfs/core/coreunix"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -11,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/pin/gc"
 	"github.com/ipfs/go-ipfs/repo"
 
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-blockservice"
-	cid "github.com/ipfs/go-cid"
-	datastore "github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	config "github.com/ipfs/go-ipfs-config"
@@ -39,13 +40,19 @@ func TestAddMultipleGCLive(t *testing.T) {
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
 	}
-	node, err := core.NewNode(context.Background(), &core.BuildCfg{Repo: r})
+	api, err := coreapi.New(
+		coreapi.Ctx(context.Background()),
+
+		coreapi.Repo(r),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// nolint
+	node := api.Node()
 
 	out := make(chan interface{}, 10)
-	adder, err := NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)
+	adder, err := coreunix.NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,13 +156,19 @@ func TestAddGCLive(t *testing.T) {
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
 	}
-	node, err := core.NewNode(context.Background(), &core.BuildCfg{Repo: r})
+	api, err := coreapi.New(
+		coreapi.Ctx(context.Background()),
+
+		coreapi.Repo(r),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// nolint
+	node := api.Node()
 
 	out := make(chan interface{})
-	adder, err := NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)
+	adder, err := coreunix.NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,15 +275,22 @@ func testAddWPosInfo(t *testing.T, rawLeaves bool) {
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
 	}
-	node, err := core.NewNode(context.Background(), &core.BuildCfg{Repo: r})
+
+	api, err := coreapi.New(
+		coreapi.Ctx(context.Background()),
+
+		coreapi.Repo(r),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// nolint
+	node := api.Node()
 
 	bs := &testBlockstore{GCBlockstore: node.Blockstore, expectedPath: filepath.Join(os.TempDir(), "foo.txt"), t: t}
 	bserv := blockservice.New(bs, node.Exchange)
 	dserv := dag.NewDAGService(bserv)
-	adder, err := NewAdder(context.Background(), node.Pinning, bs, dserv)
+	adder, err := coreunix.NewAdder(context.Background(), node.Pinning, bs, dserv)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ipfs/go-ipfs/core/node/helpers"
@@ -10,11 +9,12 @@ import (
 	q "github.com/ipfs/go-ipfs/provider/queue"
 	"github.com/ipfs/go-ipfs/provider/simple"
 	"github.com/ipfs/go-ipfs/repo"
+
 	"github.com/libp2p/go-libp2p-core/routing"
 	"go.uber.org/fx"
 )
 
-const kReprovideFrequency = time.Hour * 12
+const DefaultReprovideFrequency = time.Hour * 12
 
 // SIMPLE
 
@@ -54,64 +54,4 @@ func SimpleProviderSys(isOnline bool) interface{} {
 
 		return sys
 	}
-}
-
-// ONLINE/OFFLINE
-
-// OnlineProviders groups units managing provider routing records online
-func OnlineProviders(useStrategicProviding bool, reprovideStrategy string, reprovideInterval string) fx.Option {
-	if useStrategicProviding {
-		return fx.Provide(provider.NewOfflineProvider)
-	}
-
-	return fx.Options(
-		SimpleProviders(reprovideStrategy, reprovideInterval),
-		fx.Provide(SimpleProviderSys(true)),
-	)
-}
-
-// OfflineProviders groups units managing provider routing records offline
-func OfflineProviders(useStrategicProviding bool, reprovideStrategy string, reprovideInterval string) fx.Option {
-	if useStrategicProviding {
-		return fx.Provide(provider.NewOfflineProvider)
-	}
-
-	return fx.Options(
-		SimpleProviders(reprovideStrategy, reprovideInterval),
-		fx.Provide(SimpleProviderSys(false)),
-	)
-}
-
-// SimpleProviders creates the simple provider/reprovider dependencies
-func SimpleProviders(reprovideStrategy string, reprovideInterval string) fx.Option {
-	reproviderInterval := kReprovideFrequency
-	if reprovideInterval != "" {
-		dur, err := time.ParseDuration(reprovideInterval)
-		if err != nil {
-			return fx.Error(err)
-		}
-
-		reproviderInterval = dur
-	}
-
-	var keyProvider fx.Option
-	switch reprovideStrategy {
-	case "all":
-		fallthrough
-	case "":
-		keyProvider = fx.Provide(simple.NewBlockstoreProvider)
-	case "roots":
-		keyProvider = fx.Provide(simple.NewPinnedProvider(true))
-	case "pinned":
-		keyProvider = fx.Provide(simple.NewPinnedProvider(false))
-	default:
-		return fx.Error(fmt.Errorf("unknown reprovider strategy '%s'", reprovideStrategy))
-	}
-
-	return fx.Options(
-		fx.Provide(ProviderQueue),
-		fx.Provide(SimpleProvider),
-		keyProvider,
-		fx.Provide(SimpleReprovider(reproviderInterval)),
-	)
 }

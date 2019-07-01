@@ -10,11 +10,11 @@ import (
 	"path"
 	"strings"
 
-	assets "github.com/ipfs/go-ipfs/assets"
+	"github.com/ipfs/go-ipfs/assets"
 	oldcmds "github.com/ipfs/go-ipfs/commands"
-	core "github.com/ipfs/go-ipfs/core"
-	namesys "github.com/ipfs/go-ipfs/namesys"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/namesys"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 
 	"github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/go-ipfs-config"
@@ -61,7 +61,7 @@ environment variable:
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cctx := env.(*oldcmds.Context)
-		daemonLocked, err := fsrepo.LockedByOtherProcess(cctx.ConfigRoot)
+		daemonLocked, err := fsrepo.LockedByOtherProcess(cctx.RepoPath)
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ environment variable:
 			profiles = strings.Split(profile, ",")
 		}
 
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf)
+		return doInit(os.Stdout, cctx.RepoPath, empty, nBitsForKeypair, profiles, conf)
 	},
 }
 
@@ -208,10 +208,13 @@ func addDefaultAssets(out io.Writer, repoRoot string) error {
 		return err
 	}
 
-	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
+	api, err := coreapi.New(coreapi.Ctx(ctx), coreapi.Repo(r, coreapi.ParseConfig()))
 	if err != nil {
 		return err
 	}
+
+	// nolint
+	nd := api.Node()
 	defer nd.Close()
 
 	dkey, err := assets.SeedInitDocs(nd)
@@ -237,10 +240,13 @@ func initializeIpnsKeyspace(repoRoot string) error {
 		return err
 	}
 
-	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
+	api, err := coreapi.New(coreapi.Ctx(ctx), coreapi.Repo(r, coreapi.ParseConfig()))
 	if err != nil {
 		return err
 	}
+
+	// nolint
+	nd := api.Node()
 	defer nd.Close()
 
 	return namesys.InitializeKeyspace(ctx, nd.Namesys, nd.Pinning, nd.PrivateKey)

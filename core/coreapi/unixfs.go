@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipfs/go-ipfs/core"
-
 	"github.com/ipfs/go-ipfs/core/coreunix"
 
 	blockservice "github.com/ipfs/go-blockservice"
@@ -21,6 +19,7 @@ import (
 	ft "github.com/ipfs/go-unixfs"
 	unixfile "github.com/ipfs/go-unixfs/file"
 	uio "github.com/ipfs/go-unixfs/io"
+
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	options "github.com/ipfs/interface-go-ipfs-core/options"
 	path "github.com/ipfs/interface-go-ipfs-core/path"
@@ -61,17 +60,14 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	pinning := api.pinning
 
 	if settings.OnlyHash {
-		nilnode, err := core.NewNode(ctx, &core.BuildCfg{
-			//TODO: need this to be true or all files
-			// hashed will be stored in memory!
-			NilRepo: true,
-		})
+		nilnode, err := New(Ctx(ctx), NilRepo())
+
 		if err != nil {
 			return nil, err
 		}
-		addblockstore = nilnode.Blockstore
-		exch = nilnode.Exchange
-		pinning = nilnode.Pinning
+		addblockstore = nilnode.Node().Blockstore
+		exch = nilnode.Node().Exchange
+		pinning = nilnode.Node().Pinning
 	}
 
 	bserv := blockservice.New(addblockstore, exch) // hash security 001

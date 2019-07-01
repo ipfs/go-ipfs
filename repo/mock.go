@@ -6,6 +6,7 @@ import (
 	filestore "github.com/ipfs/go-ipfs/filestore"
 	keystore "github.com/ipfs/go-ipfs/keystore"
 
+	ds "github.com/ipfs/go-datastore"
 	config "github.com/ipfs/go-ipfs-config"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -15,7 +16,7 @@ var errTODO = errors.New("TODO: mock repo")
 // Mock is not thread-safe
 type Mock struct {
 	C config.Config
-	D Datastore
+	D ds.Batching
 	K keystore.Keystore
 	F *filestore.FileManager
 }
@@ -41,7 +42,7 @@ func (m *Mock) GetConfigKey(key string) (interface{}, error) {
 	return nil, errTODO
 }
 
-func (m *Mock) Datastore() Datastore { return m.D }
+func (m *Mock) Datastore() ds.Batching { return m.D }
 
 func (m *Mock) GetStorageUsage() (uint64, error) { return 0, nil }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/bootstrap"
 	"github.com/ipfs/go-ipfs/core/coreapi"
-	mock "github.com/ipfs/go-ipfs/core/mock"
 	"github.com/ipfs/go-ipfs/filestore"
 	"github.com/ipfs/go-ipfs/keystore"
 	"github.com/ipfs/go-ipfs/repo"
@@ -20,10 +19,11 @@ import (
 	syncds "github.com/ipfs/go-datastore/sync"
 	"github.com/ipfs/go-ipfs-config"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/tests"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/mock"
+
+	"github.com/ipfs/interface-go-ipfs-core/tests"
 )
 
 const testPeerID = "QmTFauExutTsy4XP6JbMFcw2Wa9645HJt2bTqL6qYDCKfe"
@@ -77,22 +77,19 @@ func (NodeProvider) MakeAPISwarm(ctx context.Context, fullIdentity bool, n int) 
 			F: filestore.NewFileManager(ds, filepath.Dir(os.TempDir())),
 		}
 
-		node, err := core.NewNode(ctx, &core.BuildCfg{
-			Repo:   r,
-			Host:   mock.MockHostOption(mn),
-			Online: fullIdentity,
-			ExtraOpts: map[string]bool{
-				"pubsub": true,
-			},
-		})
+		api, err := coreapi.New(
+			coreapi.Ctx(ctx),
+			coreapi.Opt(fullIdentity, coreapi.Online()),
+			coreapi.Repo(r, coreapi.ParseConfig()),
+			coreapi.MockHost(mn),
+		)
 		if err != nil {
 			return nil, err
 		}
-		nodes[i] = node
-		apis[i], err = coreapi.NewCoreAPI(node)
-		if err != nil {
-			return nil, err
-		}
+
+		// nolint
+		nodes[i] = api.Node()
+		apis[i] = api
 	}
 
 	err := mn.LinkAll()

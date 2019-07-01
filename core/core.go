@@ -35,7 +35,6 @@ import (
 	resolver "github.com/ipfs/go-path/resolver"
 	goprocess "github.com/jbenet/goprocess"
 	autonat "github.com/libp2p/go-libp2p-autonat-svc"
-	connmgr "github.com/libp2p/go-libp2p-core/connmgr"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	p2phost "github.com/libp2p/go-libp2p-core/host"
 	metrics "github.com/libp2p/go-libp2p-core/metrics"
@@ -47,7 +46,6 @@ import (
 	psrouter "github.com/libp2p/go-libp2p-pubsub-router"
 	record "github.com/libp2p/go-libp2p-record"
 	"github.com/libp2p/go-libp2p/p2p/discovery"
-	p2pbhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )
 
@@ -169,10 +167,11 @@ func (n *IpfsNode) loadBootstrapPeers() ([]peer.AddrInfo, error) {
 	return cfg.BootstrapPeers()
 }
 
-type ConstructPeerHostOpts struct {
-	AddrsFactory      p2pbhost.AddrsFactory
-	DisableNatPortMap bool
-	DisableRelay      bool
-	EnableRelayHop    bool
-	ConnectionManager connmgr.ConnManager
+func (n *IpfsNode) SetupCtx(ctx context.Context, stop func() error) *IpfsNode {
+	if n.ctx != nil {
+		panic("ctx already present")
+	}
+	n.ctx = ctx
+	n.stop = stop
+	return n
 }

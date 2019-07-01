@@ -68,5 +68,5 @@ func GetConfigRoot(env cmds.Environment) (string, error) {
 		return "", fmt.Errorf("expected env to be of type %T, got %T", ctx, env)
 	}
 
-	return ctx.ConfigRoot, nil
+	return ctx.RepoPath, nil
 }

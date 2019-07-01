@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/ipfs/go-ipfs/plugin"
-	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 
+	ds "github.com/ipfs/go-datastore"
 	levelds "github.com/ipfs/go-ds-leveldb"
 	ldbopts "github.com/syndtr/goleveldb/leveldb/opt"
 )
@@ -76,7 +76,7 @@ func (c *datastoreConfig) DiskSpec() fsrepo.DiskSpec {
 	}
 }
 
-func (c *datastoreConfig) Create(path string) (repo.Datastore, error) {
+func (c *datastoreConfig) Create(path string) (ds.Batching, error) {
 	p := c.path
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(path, p)

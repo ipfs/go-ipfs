@@ -36,7 +36,7 @@ type Repo interface {
 	GetConfigKey(key string) (interface{}, error)
 
 	// Datastore returns a reference to the configured data storage backend.
-	Datastore() Datastore
+	Datastore() ds.Batching
 
 	// GetStorageUsage returns the number of bytes stored.
 	GetStorageUsage() (uint64, error)
@@ -54,10 +54,4 @@ type Repo interface {
 	SwarmKey() ([]byte, error)
 
 	io.Closer
-}
-
-// Datastore is the interface required from a datastore to be
-// acceptable to FSRepo.
-type Datastore interface {
-	ds.Batching // must be thread-safe
 }

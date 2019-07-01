@@ -12,6 +12,7 @@ import (
 	"time"
 
 	core "github.com/ipfs/go-ipfs/core"
+
 	logging "github.com/ipfs/go-log"
 	"github.com/jbenet/goprocess"
 	periodicproc "github.com/jbenet/goprocess/periodic"
@@ -30,6 +31,17 @@ const shutdownTimeout = 30 * time.Second
 // is interested in mediating requests to future options, or the same mux
 // initially passed in if not.
 type ServeOption func(*core.IpfsNode, net.Listener, *http.ServeMux) (*http.ServeMux, error)
+
+// DefaultMux tells mux to serve path using the default muxer. This is
+// mostly useful to hook up things that register in the default muxer,
+// and don't provide a convenient http.Handler entry point, such as
+// expvar and http/pprof.
+func DefaultMux(path string) ServeOption {
+	return func(node *core.IpfsNode, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
+		mux.Handle(path, http.DefaultServeMux)
+		return mux, nil
+	}
+}
 
 // makeHandler turns a list of ServeOptions into a http.Handler that implements
 // all of the given options, in order.

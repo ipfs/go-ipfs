@@ -100,7 +100,7 @@ type FSRepo struct {
 	// the same fsrepo path concurrently
 	lockfile io.Closer
 	config   *config.Config
-	ds       repo.Datastore
+	ds       ds.Batching
 	keystore keystore.Keystore
 	filemgr  *filestore.FileManager
 }
@@ -670,7 +670,7 @@ func (r *FSRepo) SetConfigKey(key string, value interface{}) error {
 
 // Datastore returns a repo-owned datastore. If FSRepo is Closed, return value
 // is undefined.
-func (r *FSRepo) Datastore() repo.Datastore {
+func (r *FSRepo) Datastore() ds.Batching {
 	packageLock.Lock()
 	d := r.ds
 	packageLock.Unlock()

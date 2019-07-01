@@ -21,8 +21,8 @@ var log = logging.Logger("command")
 
 // Context represents request context
 type Context struct {
-	ConfigRoot string
-	ReqLog     *ReqLog
+	RepoPath string
+	ReqLog   *ReqLog
 
 	Plugins *loader.PluginLoader
 
@@ -43,7 +43,7 @@ func (c *Context) GetConfig() (*config.Config, error) {
 		if c.LoadConfig == nil {
 			return nil, errors.New("nil LoadConfig function")
 		}
-		c.config, err = c.LoadConfig(c.ConfigRoot)
+		c.config, err = c.LoadConfig(c.RepoPath)
 	}
 	return c.config, err
 }

@@ -3,12 +3,12 @@ package integrationtest
 import (
 	"bytes"
 	"context"
+	"github.com/ipfs/go-ipfs/core/coreapi"
 	"testing"
 
 	"github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/mock"
 	"github.com/ipfs/go-ipfs/core/node/libp2p"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 )
@@ -23,14 +23,19 @@ func TestBitswapWithoutRouting(t *testing.T) {
 
 	var nodes []*core.IpfsNode
 	for i := 0; i < numPeers; i++ {
-		n, err := core.NewNode(ctx, &core.BuildCfg{
-			Online:  true,
-			Host:    coremock.MockHostOption(mn),
-			Routing: libp2p.NilRouterOption, // no routing
-		})
+		api, err := coreapi.New(
+			coreapi.Ctx(ctx),
+
+			coreapi.Online(),
+			coreapi.MockHost(mn),
+			coreapi.Override(coreapi.Libp2pRouting, libp2p.NilRouting),
+		)
 		if err != nil {
 			t.Fatal(err)
 		}
+		// nolint
+		n := api.Node()
+
 		defer n.Close()
 		nodes = append(nodes, n)
 	}

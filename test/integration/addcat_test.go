@@ -12,16 +12,15 @@ import (
 	"time"
 
 	files "github.com/ipfs/go-ipfs-files"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/bootstrap"
-	"github.com/ipfs/go-ipfs/core/coreapi"
-	mock "github.com/ipfs/go-ipfs/core/mock"
-	"github.com/ipfs/go-ipfs/thirdparty/unit"
 	logging "github.com/ipfs/go-log"
 	random "github.com/jbenet/go-random"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	testutil "github.com/libp2p/go-libp2p-testing/net"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
+
+	"github.com/ipfs/go-ipfs/core/bootstrap"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/thirdparty/unit"
 )
 
 var log = logging.Logger("epictest")
@@ -104,33 +103,31 @@ func DirectAddCat(data []byte, conf testutil.LatencyConfig) error {
 		Bandwidth: math.MaxInt32,
 	})
 
-	adder, err := core.NewNode(ctx, &core.BuildCfg{
-		Online: true,
-		Host:   mock.MockHostOption(mn),
-	})
+	adderApi, err := coreapi.New(
+		coreapi.Ctx(ctx),
+
+		coreapi.Online(),
+		coreapi.MockHost(mn),
+	)
 	if err != nil {
 		return err
 	}
+	// nolint
+	adder := adderApi.Node()
 	defer adder.Close()
 
-	catter, err := core.NewNode(ctx, &core.BuildCfg{
-		Online: true,
-		Host:   mock.MockHostOption(mn),
-	})
+	catterApi, err := coreapi.New(
+		coreapi.Ctx(ctx),
+
+		coreapi.Online(),
+		coreapi.MockHost(mn),
+	)
 	if err != nil {
 		return err
 	}
+	// nolint
+	catter := catterApi.Node()
 	defer catter.Close()
-
-	adderApi, err := coreapi.NewCoreAPI(adder)
-	if err != nil {
-		return err
-	}
-
-	catterApi, err := coreapi.NewCoreAPI(catter)
-	if err != nil {
-		return err
-	}
 
 	err = mn.LinkAll()
 	if err != nil {
@@ -146,6 +143,14 @@ func DirectAddCat(data []byte, conf testutil.LatencyConfig) error {
 	if err := adder.Bootstrap(bootstrap.BootstrapConfigWithPeers(bs2)); err != nil {
 		return err
 	}
+
+	p, err := catterApi.Swarm().Peers(ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(len(p))
+	fmt.Println(p)
 
 	added, err := adderApi.Unixfs().Add(ctx, files.NewBytesFile(data))
 	if err != nil {

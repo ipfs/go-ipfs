@@ -3,6 +3,7 @@
 package node
 
 import (
+	"github.com/ipfs/go-ipfs/core/coreapi"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -13,9 +14,8 @@ import (
 
 	"context"
 
-	core "github.com/ipfs/go-ipfs/core"
-	ipns "github.com/ipfs/go-ipfs/fuse/ipns"
-	mount "github.com/ipfs/go-ipfs/fuse/mount"
+	"github.com/ipfs/go-ipfs/fuse/ipns"
+	"github.com/ipfs/go-ipfs/fuse/mount"
 
 	ci "github.com/libp2p/go-libp2p-testing/ci"
 )
@@ -42,10 +42,15 @@ func TestExternalUnmount(t *testing.T) {
 	// TODO: needed?
 	maybeSkipFuseTests(t)
 
-	node, err := core.NewNode(context.Background(), &core.BuildCfg{})
+	api, err := coreapi.New(
+		coreapi.Ctx(context.Background()),
+		coreapi.RandomIdentity(),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// nolint
+	node := api.Node()
 
 	err = ipns.InitializeKeyspace(node, node.PrivateKey)
 	if err != nil {

@@ -75,19 +75,18 @@ func run(ipfsPath, watchPath string) error {
 		return err
 	}
 
-	node, err := core.NewNode(context.Background(), &core.BuildCfg{
-		Online: true,
-		Repo:   r,
-	})
-	if err != nil {
-		return err
-	}
-	defer node.Close()
+	api, err := coreapi.New(
+		coreapi.Ctx(context.Background()),
 
-	api, err := coreapi.NewCoreAPI(node)
+		coreapi.Online(),
+		coreapi.Repo(r),
+	)
 	if err != nil {
 		return err
 	}
+	// nolint
+	node := api.Node()
+	defer node.Close()
 
 	if *http {
 		addr := "/ip4/127.0.0.1/tcp/5001"
@@ -213,7 +212,7 @@ func IsHidden(path string) bool {
 
 func cmdCtx(node *core.IpfsNode, repoPath string) commands.Context {
 	return commands.Context{
-		ConfigRoot: repoPath,
+		RepoPath: repoPath,
 		LoadConfig: func(path string) (*config.Config, error) {
 			return node.Repo.Config()
 		},
