@@ -1,6 +1,7 @@
 package integrationtest
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/ipfs/go-ipfs/thirdparty/unit"
@@ -8,16 +9,17 @@ import (
 )
 
 func benchmarkAddCat(numBytes int64, conf testutil.LatencyConfig, b *testing.B) {
-
-	b.StopTimer()
-	b.SetBytes(numBytes)
 	data := RandomBytes(numBytes) // we don't want to measure the time it takes to generate this data
-	b.StartTimer()
 
+	b.SetBytes(numBytes)
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		if err := DirectAddCat(data, conf); err != nil {
 			b.Fatal(err)
 		}
+		b.StopTimer()
+		runtime.GC()
+		b.StartTimer()
 	}
 }
 

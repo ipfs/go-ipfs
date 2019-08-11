@@ -1,4 +1,4 @@
-version: 2.0
+version: 2.1
 
 aliases:
   make_out_dirs: &make_out_dirs
@@ -16,6 +16,30 @@ aliases:
         paths:
           - ~/go/pkg/mod
           - ~/.cache/go-build/
+
+commands:
+  benchmark:
+    parameters:
+      output:
+        type: string
+      branch:
+        type: string
+        default: HEAD
+    steps:
+      - checkout
+      - run: git checkout << parameters.branch >>
+      - *make_out_dirs
+      - *restore_gomod
+      - run:
+          command: go test -tags nofuse -run=NONE -bench=. ./... | tee /tmp/circleci-workspace/<< parameters.output >>
+          environment:
+            IPFS_LOGGING: critical
+            CGO_ENABLED: 0
+      - persist_to_workspace:
+          root: /tmp/circleci-workspace
+          paths:
+            - << parameters.output >>
+      - *store_gomod
 
 
 defaults: &defaults
@@ -142,6 +166,40 @@ jobs:
           paths:
             - bin/ipfs
       - *store_gomod
+  benchmark-release:
+    docker:
+      - image: circleci/golang:1.12
+    <<: *defaults
+    steps:
+      - benchmark:
+          output: benchmark-release.txt
+          branch: release
+  benchmark-before:
+    docker:
+      - image: circleci/golang:1.12
+    <<: *defaults
+    steps:
+      - benchmark:
+          output: benchmark-before.txt
+          branch: master
+  benchmark-after:
+    docker:
+      - image: circleci/golang:1.12
+    <<: *defaults
+    steps:
+      - benchmark:
+          output: benchmark-after.txt
+  benchmark-compare:
+    docker:
+      - image: circleci/golang:1.12
+    <<: *defaults
+    steps:
+      - checkout
+      - *make_out_dirs
+      - attach_workspace:
+          at: /tmp/circleci-workspace
+      - run: bin/diff-benchmarks /tmp/circleci-workspace/benchmark-before.txt /tmp/circleci-workspace/benchmark-after.txt
+      - run: bin/diff-benchmarks /tmp/circleci-workspace/benchmark-release.txt /tmp/circleci-workspace/benchmark-after.txt
   interop:
     docker:
       - image: circleci/node:10
@@ -258,3 +316,11 @@ workflows:
     - go-ipfs-http-client:
         requires:
           - build
+    - benchmark-before
+    - benchmark-after
+    - benchmark-release
+    - benchmark-compare:
+        requires:
+          - benchmark-after
+          - benchmark-before
+          - benchmark-release
