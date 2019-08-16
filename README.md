@@ -347,6 +347,8 @@ The swarm key initialization can also be done using docker secrets **(requires d
     cat your_swarm.key | docker secret create swarm_key_secret -
     docker run -d --name ipfs_host --secret swarm_key_secret -e IPFS_SWARM_KEY_FILE=/run/secrets/swarm_key_secret -v $ipfs_staging:/export -v $ipfs_data:/data/ipfs -p 4001:4001 -p 127.0.0.1:8080:8080 -p 127.0.0.1:5001:5001 ipfs/go-ipfs:latest
 
+To perform a custom initialization and configuration step, one can create or mount a `/container-init.d` directory containing `.sh` scripts. These scripts are executed if they have `+x` permission, otherwise they are just sourced. The scripts may also depend on environment variables set by the `docker run` command or in `docker-compose.yml`. The custom initialization step is **only** performed during IPFS initialization and is executed **after** the swarm key is copied to the IPFS data directory.
+
 ### Troubleshooting
 
 If you have previously installed IPFS before and you are running into problems getting a newer version to work, try deleting (or backing up somewhere else) your IPFS config directory (~/.ipfs by default) and rerunning `ipfs init`. This will reinitialize the config file to its defaults and clear out the local datastore of any bad entries.
