@@ -63,7 +63,7 @@ else
       # source the others
       if [ -x "$script" ] ; then
         echo "-Executing '$script'..."
-        $script
+        $script || exit 1
       else
         echo "-Sourcing '$script'..."
         source $script
