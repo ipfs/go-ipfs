@@ -58,7 +58,7 @@ else
   if [ -d "$IPFS_INIT_SCRIPTS_DIR" ] ; then
     echo "Configuring IPFS using init scripts..."
     # Check for any *.sh scripts
-    for script in "$IPFS_INIT_SCRIPTS_DIR/"*.sh ; do
+    for script in $(find $IPFS_INIT_SCRIPTS_DIR -type f \( -iname \*.sh \)) ; do
       # Execute the scripts with +x permission and
       # source the others
       if [ -x "$script" ] ; then
