@@ -115,3 +115,5 @@ require (
 )
 
 go 1.12
+
+replace github.com/ipfs/go-merkledag => github.com/reinerRubin/go-merkledag v0.0.4-0.20190605083217-3ff70c5ac497

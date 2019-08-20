@@ -698,6 +698,8 @@ github.com/prometheus/procfs v0.0.0-20190507164030-5867b95ac084/go.mod h1:TjEm7z
 github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d h1:Z5QMcUKnQw7ouB1wDuyZM6TL/rm+brJcNk6Ai8ut3zM=
 github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
+github.com/reinerRubin/go-merkledag v0.0.4-0.20190605083217-3ff70c5ac497 h1:yfIpS84RJHaKdr7T+QDMHo6+wdbidIF16naYwWxmnMo=
+github.com/reinerRubin/go-merkledag v0.0.4-0.20190605083217-3ff70c5ac497/go.mod h1:Oc5kIXLHokkE1hWGMBHw+oxehkAaTOqtEb7Zbh6BhLA=
 github.com/rogpeppe/go-internal v1.1.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rs/cors v1.6.0 h1:G9tHG9lebljV9mfp9SNPDL36nCDxmo3zTlAf1YgvzmI=
 github.com/rs/cors v1.6.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=

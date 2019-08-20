@@ -161,6 +161,20 @@ test_pin_progress() {
   '
 }
 
+test_pin_verbose_progress() {
+  test_pin_dag_init
+
+  test_expect_success "'ipfs pin add --progress --verbose' file" '
+    ipfs pin add --progress --verbose $HASH 2> test_pin_verbose_progress_err
+  '
+
+  test_expect_success "pin verbose progress reported correctly" '
+    cat test_pin_verbose_progress_err
+    grep -q "Pinning $HASH" test_pin_verbose_progress_err
+  '
+}
+
+
 test_init_ipfs
 
 test_pins '' '' ''
@@ -192,6 +206,9 @@ test_pin_dag
 test_pin_dag --raw-leaves
 
 test_pin_progress
+
+test_pin_dag
+test_pin_verbose_progress
 
 test_kill_ipfs_daemon
 

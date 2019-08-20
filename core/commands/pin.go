@@ -43,13 +43,15 @@ type PinOutput struct {
 }
 
 type AddPinOutput struct {
-	Pins     []string
-	Progress int `json:",omitempty"`
+	Pins        []string
+	OngoingPins []string `json:",omitempty"`
+	Progress    int      `json:",omitempty"`
 }
 
 const (
-	pinRecursiveOptionName = "recursive"
-	pinProgressOptionName  = "progress"
+	pinRecursiveOptionName       = "recursive"
+	pinProgressOptionName        = "progress"
+	pinProgressVerboseOptionName = "verbose"
 )
 
 var addPinCmd = &cmds.Command{
@@ -64,6 +66,7 @@ var addPinCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively pin the object linked to by the specified object(s).").WithDefault(true),
 		cmds.BoolOption(pinProgressOptionName, "Show progress"),
+		cmds.BoolOption(pinProgressVerboseOptionName, "Show progress more detailed"),
 	},
 	Type: AddPinOutput{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -74,7 +77,9 @@ var addPinCmd = &cmds.Command{
 
 		// set recursive flag
 		recursive, _ := req.Options[pinRecursiveOptionName].(bool)
-		showProgress, _ := req.Options[pinProgressOptionName].(bool)
+		showProgressBasic, _ := req.Options[pinProgressOptionName].(bool)
+		showProgressVerbose, _ := req.Options[pinProgressVerboseOptionName].(bool)
+		showProgress := showProgressBasic || showProgressVerbose
 
 		if err := req.ParseBodyArgs(); err != nil {
 			return err
@@ -94,8 +99,8 @@ var addPinCmd = &cmds.Command{
 			return cmds.EmitOnce(res, &AddPinOutput{Pins: added})
 		}
 
-		v := new(dag.ProgressTracker)
-		ctx := v.DeriveContext(req.Context)
+		progressTracker := dag.NewProgressTracker()
+		ctx := dag.WithProgressTracker(req.Context, progressTracker)
 
 		type pinResult struct {
 			pins []string
@@ -111,6 +116,19 @@ var addPinCmd = &cmds.Command{
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
 
+		progressOutput := func() *AddPinOutput {
+			cids := progressTracker.PopPlannedToPin()
+			ongoingPins := make([]string, 0, len(cids))
+			for _, cid := range cids {
+				ongoingPins = append(ongoingPins, cid.String())
+			}
+
+			return &AddPinOutput{
+				Progress:    progressTracker.TotalToPin(),
+				OngoingPins: ongoingPins,
+			}
+		}
+
 		for {
 			select {
 			case val := <-ch:
@@ -118,14 +136,16 @@ var addPinCmd = &cmds.Command{
 					return val.err
 				}
 
-				if pv := v.Value(); pv != 0 {
-					if err := res.Emit(&AddPinOutput{Progress: v.Value()}); err != nil {
+				if pv := progressTracker.TotalToPin(); pv != 0 {
+					if err := res.Emit(progressOutput()); err != nil {
 						return err
 					}
 				}
+
 				return res.Emit(&AddPinOutput{Pins: val.pins})
 			case <-ticker.C:
-				if err := res.Emit(&AddPinOutput{Progress: v.Value()}); err != nil {
+				err := res.Emit(progressOutput())
+				if err != nil {
 					return err
 				}
 			case <-ctx.Done():
@@ -153,6 +173,9 @@ var addPinCmd = &cmds.Command{
 	},
 	PostRun: cmds.PostRunMap{
 		cmds.CLI: func(res cmds.Response, re cmds.ResponseEmitter) error {
+			showDigitProgress, _ := res.Request().Options[pinProgressOptionName].(bool)
+			showVerboseProgress, _ := res.Request().Options[pinProgressVerboseOptionName].(bool)
+
 			for {
 				v, err := res.Next()
 				if err != nil {
@@ -166,9 +189,18 @@ var addPinCmd = &cmds.Command{
 				if !ok {
 					return e.TypeErr(out, v)
 				}
-				if out.Pins == nil {
-					// this can only happen if the progress option is set
-					fmt.Fprintf(os.Stderr, "Fetched/Processed %d nodes\r", out.Progress)
+
+				// this can only happen if the progress/verbose options are set
+				if inProgress := out.Pins == nil; inProgress {
+					if showVerboseProgress {
+						for _, pin := range out.OngoingPins {
+							fmt.Fprintf(os.Stderr,
+								"Pinning %s\n", pin)
+						}
+					} else if showDigitProgress {
+						fmt.Fprintf(os.Stderr,
+							"Fetched/Processed %d nodes\r", out.Progress)
+					}
 				} else {
 					err = re.Emit(out)
 					if err != nil {
@@ -283,7 +315,7 @@ Use --type=<type> to specify the type of pinned keys to list.
 Valid values are:
     * "direct": pin that specific object.
     * "recursive": pin that specific object, and indirectly pin all its
-    	descendants
+	descendants
     * "indirect": pinned indirectly by an ancestor (like a refcount)
     * "all"
 
