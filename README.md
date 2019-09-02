@@ -347,7 +347,44 @@ The swarm key initialization can also be done using docker secrets **(requires d
     cat your_swarm.key | docker secret create swarm_key_secret -
     docker run -d --name ipfs_host --secret swarm_key_secret -e IPFS_SWARM_KEY_FILE=/run/secrets/swarm_key_secret -v $ipfs_staging:/export -v $ipfs_data:/data/ipfs -p 4001:4001 -p 127.0.0.1:8080:8080 -p 127.0.0.1:5001:5001 ipfs/go-ipfs:latest
 
-To perform a custom initialization and configuration step, one can create or mount a `/container-init.d` directory containing `.sh` scripts. These scripts are executed if they have `+x` permission, otherwise they are just sourced. The scripts may also depend on environment variables set by the `docker run` command or in `docker-compose.yml`. The custom initialization step is **only** performed during IPFS initialization and is executed **after** the swarm key is copied to the IPFS data directory.
+To perform a custom initialization and configuration step, one can mount `.sh` scripts to a `/container-init.d` directory, or mount the entire directory. These scripts are executed if they have `+x` permission, otherwise they are just sourced. Executed scripts can exit with error and abort the initialization process. The scripts may also depend on environment variables set by the `docker run` command or in `docker-compose.yml`. The custom initialization step is **only** performed during IPFS initialization, **after** `ipfs init`, **after** after the swarm key is copied to the IPFS data directory, and **before** the daemon is started. This also enables custom containers to layer extra initialization steps to the base image by adding more scripts to `/container-init.d`.
+
+This example initializes a peer in a private network, without any communication with the default bootstrap nodes because it is performed before the daemon starts:
+
+    # This is the initialization script
+    TEST_NAME=00-test.sh
+    TEST_SCRIPT=`pwd`/$TEST_NAME
+
+    # The script will add this node when creating the container
+    MY_PEER_IP=127.0.0.1
+    MY_PEER_HASH=QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
+
+    # For instructional purposes, create the initialization script here,
+    # but this may be part of a suite of scripts maintained by the IT team,
+    # or created inside a custom Dockerfile.
+    cat >$TEST_SCRIPT <<EOF
+    echo Removing boostraps...
+    ipfs bootstrap rm all || exit 1
+    echo Adding custom boostrap from environment...
+    MULTIADDR=/ip4/\$MY_PEER_IP/tcp/4001/ipfs/\$MY_PEER_HASH
+    ipfs bootstrap add \$MULTIADDR || exit 1
+    exit 0
+    EOF
+
+    # Set the script as executable
+    chmod +x $TEST_SCRIPT
+
+    # Initialize the container with the custom scripted mounted.
+    # It is also possible to mount the entire /container-init.d
+    # rather than a single
+    docker run -d --name ipfs_host \
+        -e MY_PEER_IP=$MY_PEER_IP \
+        -e MY_PEER_HASH=$MY_PEER_HASH \
+        -v $TEST_SCRIPT:/container-init.d/$TEST_NAME \
+        -p 4001:4001 \
+        -p 127.0.0.1:8080:8080 \
+        -p 127.0.0.1:5001:5001 \
+        ipfs/go-ipfs:latest
 
 ### Troubleshooting
 
