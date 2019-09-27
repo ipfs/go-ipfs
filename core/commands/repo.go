@@ -195,6 +195,8 @@ Version         string The repo version.
 
 			if !sizeOnly {
 				fmt.Fprintf(wtr, "NumObjects:\t%d\n", stat.NumObjects)
+				fmt.Fprintf(wtr, "NumValues:\t%d\n", stat.NumValues)
+				fmt.Fprintf(wtr, "NumProviders:\t%d\n", stat.NumProviders)
 			}
 
 			printSize("RepoSize", stat.RepoSize)
