@@ -213,11 +213,6 @@ func NewPinner(dstore ds.Datastore, serv, internal ipld.DAGService) Pinner {
 func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	err := p.dserv.Add(ctx, node)
-	if err != nil {
-		return err
-	}
-
 	c := node.Cid()
 
 	if recurse {
@@ -243,6 +238,10 @@ func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool) error {
 
 		p.recursePin.Add(c)
 	} else {
+		if p.recursePin.Has(c) {
+			return fmt.Errorf("%s already pinned recursively", c.String())
+		}
+
 		p.lock.Unlock()
 		_, err := p.dserv.Get(ctx, c)
 		p.lock.Lock()
