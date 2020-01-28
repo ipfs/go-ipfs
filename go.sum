@@ -112,6 +112,8 @@ github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5a
 github.com/google/go-cmp v0.3.0 h1:crn/baboCvb5fXaQ0IJ1SGTsTVrWpDsCWC8EGETZijY=
 github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
+github.com/google/martian v2.1.0+incompatible h1:/CP5g8u/VJHijgedC/Legn3BAbAaWPgecwXBIDzw5no=
+github.com/google/martian v2.1.0+incompatible/go.mod h1:9I4somxYTbIHy5NJKHRl3wXiIaQGbYVAs8BPL6v8lEs=
 github.com/google/uuid v1.1.1 h1:Gkbcsh/GbpXz7lPftLA3P6TYMwjCLYm83jiFQZF/3gY=
 github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
@@ -123,6 +125,10 @@ github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/ad
 github.com/gxed/hashland/keccakpg v0.0.1/go.mod h1:kRzw3HkwxFU1mpmPP8v1WyQzwdGfmKFJ6tItnhQ67kU=
 github.com/gxed/hashland/murmur3 v0.0.1/go.mod h1:KjXop02n4/ckmZSnY2+HKcLud/tcmvhST0bie/0lS48=
 github.com/gxed/pubsub v0.0.0-20180201040156-26ebdf44f824/go.mod h1:OiEWyHgK+CWrmOlVquHaIK1vhpUJydC9m0Je6mhaiNE=
+github.com/hacdias/interface-go-ipfs-core v0.2.6-0.20191207123451-a1a93a6e33e7 h1:WsOo9f0a04ehGkh/Cgmkwum7DKwRF9dFyxl1fOppb9k=
+github.com/hacdias/interface-go-ipfs-core v0.2.6-0.20191207123451-a1a93a6e33e7/go.mod h1:AGHzFaPhV4nYLymAuuZPkp+hAMXRb3fjLLxWFYql2Ck=
+github.com/hacdias/interface-go-ipfs-core v0.2.6-0.20191207124604-39489ae2bff1 h1:VJ5pcUb5qVs+nxA2/XUDQI3Jv0QwEhhyj27elzreWRs=
+github.com/hacdias/interface-go-ipfs-core v0.2.6-0.20191207124604-39489ae2bff1/go.mod h1:AGHzFaPhV4nYLymAuuZPkp+hAMXRb3fjLLxWFYql2Ck=
 github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/UYA=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-multierror v1.0.0 h1:iVjPR7a6H0tWELX5NxNe7bYopibicUzc7uPribsnS6o=
@@ -294,6 +300,8 @@ github.com/jackpal/go-nat-pmp v1.0.1/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+
 github.com/jbenet/go-cienv v0.0.0-20150120210510-1bb1476777ec/go.mod h1:rGaEvXB4uRSZMmzKNLoXvTu1sfx+1kv/DojUlPrSZGs=
 github.com/jbenet/go-cienv v0.1.0 h1:Vc/s0QbQtoxX8MwwSLWWh+xNNZvM3Lw7NsTcHrvvhMc=
 github.com/jbenet/go-cienv v0.1.0/go.mod h1:TqNnHUmJgXau0nCzC7kXWeotg3J9W34CUv5Djy1+FlA=
+github.com/jbenet/go-fuse-version v0.0.0-20160322195114-6d4c97bcf253 h1:+AUuGGAh/2X3wcomiZvjeTcx5OvGXsfdnIqk3KPM+HE=
+github.com/jbenet/go-fuse-version v0.0.0-20160322195114-6d4c97bcf253/go.mod h1:gWtF+3u3zVe5/+I44niTEcU/KmVo2oMyLh0WhxpBT28=
 github.com/jbenet/go-is-domain v1.0.3 h1:FuRBJ0h79p00eseyaLckJT5KnE8RyqI+HLopvNSyNE0=
 github.com/jbenet/go-is-domain v1.0.3/go.mod h1:xbRLRb0S7FgzDBTJlguhDVwLYM/5yNtvktxj2Ttfy7Q=
 github.com/jbenet/go-random v0.0.0-20190219211222-123a90aedc0c h1:uUx61FiAa1GI6ZmVd2wf2vULeQZIKG66eybjNXKYCz4=

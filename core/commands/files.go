@@ -1,35 +1,23 @@
 package commands
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	gopath "path"
 	"sort"
 	"strings"
 
-	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	"github.com/ipfs/go-ipfs/core/fileshelpers"
 
 	"github.com/dustin/go-humanize"
-	bservice "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
-	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	offline "github.com/ipfs/go-ipfs-exchange-offline"
-	ipld "github.com/ipfs/go-ipld-format"
-	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
 	"github.com/ipfs/go-mfs"
-	ft "github.com/ipfs/go-unixfs"
 	iface "github.com/ipfs/interface-go-ipfs-core"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
 	mh "github.com/multiformats/go-multihash"
 )
-
-var flog = logging.Logger("cmds/files")
 
 // FilesCmd is the 'ipfs files' command
 var FilesCmd = &cmds.Command{
@@ -76,17 +64,6 @@ var hashOption = cmds.StringOption(filesHashOptionName, "Hash function to use. W
 
 var errFormat = errors.New("format was set by multiple options. Only one format option is allowed")
 
-type statOutput struct {
-	Hash           string
-	Size           uint64
-	CumulativeSize uint64
-	Blocks         int
-	Type           string
-	WithLocality   bool   `json:",omitempty"`
-	Local          bool   `json:",omitempty"`
-	SizeLocal      uint64 `json:",omitempty"`
-}
-
 const (
 	defaultStatFormat = `<hash>
 Size: <size>
@@ -130,11 +107,6 @@ var filesStatCmd = &cmds.Command{
 			return err
 		}
 
-		path, err := checkPath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-
 		withLocal, _ := req.Options[filesWithLocalOptionName].(bool)
 
 		enc, err := cmdenv.GetCidEncoder(req)
@@ -142,44 +114,27 @@ var filesStatCmd = &cmds.Command{
 			return err
 		}
 
-		var dagserv ipld.DAGService
-		if withLocal {
-			// an offline DAGService will not fetch from the network
-			dagserv = dag.NewDAGService(bservice.New(
-				node.Blockstore,
-				offline.Exchange(node.Blockstore),
-			))
-		} else {
-			dagserv = node.DAG
-		}
+		o, err := fileshelpers.Stat(
+			req.Context,
+			node.FilesRoot,
+			api,
+			node.Blockstore,
+			node.DAG,
+			req.Arguments[0],
+			&iface.FilesStatOptions{
+				WithLocality: withLocal,
+				CidEncoder:   enc,
+			},
+		)
 
-		nd, err := getNodeFromPath(req.Context, node, api, path)
 		if err != nil {
 			return err
 		}
-
-		o, err := statNode(nd, enc)
-		if err != nil {
-			return err
-		}
-
-		if !withLocal {
-			return cmds.EmitOnce(res, o)
-		}
-
-		local, sizeLocal, err := walkBlock(req.Context, dagserv, nd)
-		if err != nil {
-			return err
-		}
-
-		o.WithLocality = true
-		o.Local = local
-		o.SizeLocal = sizeLocal
 
 		return cmds.EmitOnce(res, o)
 	},
 	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *statOutput) error {
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *iface.FileInfo) error {
 			s, _ := statGetFormatOptions(req)
 			s = strings.Replace(s, "<hash>", out.Hash, -1)
 			s = strings.Replace(s, "<size>", fmt.Sprintf("%d", out.Size), -1)
@@ -200,7 +155,7 @@ var filesStatCmd = &cmds.Command{
 			return nil
 		}),
 	},
-	Type: statOutput{},
+	Type: iface.FileInfo{},
 }
 
 func moreThanOne(a, b, c bool) bool {
@@ -226,83 +181,6 @@ func statGetFormatOptions(req *cmds.Request) (string, error) {
 	}
 }
 
-func statNode(nd ipld.Node, enc cidenc.Encoder) (*statOutput, error) {
-	c := nd.Cid()
-
-	cumulsize, err := nd.Size()
-	if err != nil {
-		return nil, err
-	}
-
-	switch n := nd.(type) {
-	case *dag.ProtoNode:
-		d, err := ft.FSNodeFromBytes(n.Data())
-		if err != nil {
-			return nil, err
-		}
-
-		var ndtype string
-		switch d.Type() {
-		case ft.TDirectory, ft.THAMTShard:
-			ndtype = "directory"
-		case ft.TFile, ft.TMetadata, ft.TRaw:
-			ndtype = "file"
-		default:
-			return nil, fmt.Errorf("unrecognized node type: %s", d.Type())
-		}
-
-		return &statOutput{
-			Hash:           enc.Encode(c),
-			Blocks:         len(nd.Links()),
-			Size:           d.FileSize(),
-			CumulativeSize: cumulsize,
-			Type:           ndtype,
-		}, nil
-	case *dag.RawNode:
-		return &statOutput{
-			Hash:           enc.Encode(c),
-			Blocks:         0,
-			Size:           cumulsize,
-			CumulativeSize: cumulsize,
-			Type:           "file",
-		}, nil
-	default:
-		return nil, fmt.Errorf("not unixfs node (proto or raw)")
-	}
-}
-
-func walkBlock(ctx context.Context, dagserv ipld.DAGService, nd ipld.Node) (bool, uint64, error) {
-	// Start with the block data size
-	sizeLocal := uint64(len(nd.RawData()))
-
-	local := true
-
-	for _, link := range nd.Links() {
-		child, err := dagserv.Get(ctx, link.Cid)
-
-		if err == ipld.ErrNotFound {
-			local = false
-			continue
-		}
-
-		if err != nil {
-			return local, sizeLocal, err
-		}
-
-		childLocal, childLocalSize, err := walkBlock(ctx, dagserv, child)
-
-		if err != nil {
-			return local, sizeLocal, err
-		}
-
-		// Recursively add the child size
-		local = local && childLocal
-		sizeLocal += childLocalSize
-	}
-
-	return local, sizeLocal, nil
-}
-
 var filesCpCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Copy files into mfs.",
@@ -324,54 +202,8 @@ var filesCpCmd = &cmds.Command{
 
 		flush, _ := req.Options[filesFlushOptionName].(bool)
 
-		src, err := checkPath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		src = strings.TrimRight(src, "/")
-
-		dst, err := checkPath(req.Arguments[1])
-		if err != nil {
-			return err
-		}
-
-		if dst[len(dst)-1] == '/' {
-			dst += gopath.Base(src)
-		}
-
-		node, err := getNodeFromPath(req.Context, nd, api, src)
-		if err != nil {
-			return fmt.Errorf("cp: cannot get node from path %s: %s", src, err)
-		}
-
-		err = mfs.PutNode(nd.FilesRoot, dst, node)
-		if err != nil {
-			return fmt.Errorf("cp: cannot put node in path %s: %s", dst, err)
-		}
-
-		if flush {
-			_, err := mfs.FlushPath(req.Context, nd.FilesRoot, dst)
-			if err != nil {
-				return fmt.Errorf("cp: cannot flush the created file %s: %s", dst, err)
-			}
-		}
-
-		return nil
+		return fileshelpers.Copy(req.Context, nd.FilesRoot, api, req.Arguments[0], req.Arguments[1], &iface.FilesCopyOptions{Flush: flush})
 	},
-}
-
-func getNodeFromPath(ctx context.Context, node *core.IpfsNode, api iface.CoreAPI, p string) (ipld.Node, error) {
-	switch {
-	case strings.HasPrefix(p, "/ipfs/"):
-		return api.ResolveNode(ctx, path.New(p))
-	default:
-		fsn, err := mfs.Lookup(node.FilesRoot, p)
-		if err != nil {
-			return nil, err
-		}
-
-		return fsn.GetNode()
-	}
 }
 
 type filesLsOutput struct {
@@ -420,17 +252,7 @@ Examples:
 			arg = req.Arguments[0]
 		}
 
-		path, err := checkPath(arg)
-		if err != nil {
-			return err
-		}
-
 		nd, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		fsn, err := mfs.Lookup(nd.FilesRoot, path)
 		if err != nil {
 			return err
 		}
@@ -442,49 +264,16 @@ Examples:
 			return err
 		}
 
-		switch fsn := fsn.(type) {
-		case *mfs.Directory:
-			if !long {
-				var output []mfs.NodeListing
-				names, err := fsn.ListNames(req.Context)
-				if err != nil {
-					return err
-				}
+		listing, err := fileshelpers.List(req.Context, nd.FilesRoot, arg, &iface.FilesListOptions{
+			Long:       long,
+			CidEncoder: enc,
+		})
 
-				for _, name := range names {
-					output = append(output, mfs.NodeListing{
-						Name: name,
-					})
-				}
-				return cmds.EmitOnce(res, &filesLsOutput{output})
-			}
-			listing, err := fsn.List(req.Context)
-			if err != nil {
-				return err
-			}
-			return cmds.EmitOnce(res, &filesLsOutput{listing})
-		case *mfs.File:
-			_, name := gopath.Split(path)
-			out := &filesLsOutput{[]mfs.NodeListing{{Name: name}}}
-			if long {
-				out.Entries[0].Type = int(fsn.Type())
-
-				size, err := fsn.Size()
-				if err != nil {
-					return err
-				}
-				out.Entries[0].Size = size
-
-				nd, err := fsn.GetNode()
-				if err != nil {
-					return err
-				}
-				out.Entries[0].Hash = enc.Encode(nd.Cid())
-			}
-			return cmds.EmitOnce(res, out)
-		default:
-			return errors.New("unrecognized type")
+		if err != nil {
+			return err
 		}
+
+		return cmds.EmitOnce(res, &filesLsOutput{listing})
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *filesLsOutput) error {
@@ -537,7 +326,7 @@ Examples:
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(filesOffsetOptionName, "o", "Byte offset to begin reading from."),
-		cmds.Int64Option(filesCountOptionName, "n", "Maximum number of bytes to read."),
+		cmds.Int64Option(filesCountOptionName, "n", "Maximum number of bytes to read (0 reads everything)."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		nd, err := cmdenv.GetNode(env)
@@ -545,70 +334,20 @@ Examples:
 			return err
 		}
 
-		path, err := checkPath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-
-		fsn, err := mfs.Lookup(nd.FilesRoot, path)
-		if err != nil {
-			return err
-		}
-
-		fi, ok := fsn.(*mfs.File)
-		if !ok {
-			return fmt.Errorf("%s was not a file", path)
-		}
-
-		rfd, err := fi.Open(mfs.Flags{Read: true})
-		if err != nil {
-			return err
-		}
-
-		defer rfd.Close()
-
 		offset, _ := req.Options[offsetOptionName].(int64)
-		if offset < 0 {
-			return fmt.Errorf("cannot specify negative offset")
-		}
+		count, _ := req.Options[filesCountOptionName].(int64)
 
-		filen, err := rfd.Size()
+		rc, err := fileshelpers.Read(req.Context, nd.FilesRoot, req.Arguments[0], &iface.FilesReadOptions{
+			Offset: offset,
+			Count:  count,
+		})
 		if err != nil {
 			return err
 		}
+		defer rc.Close()
 
-		if int64(offset) > filen {
-			return fmt.Errorf("offset was past end of file (%d > %d)", offset, filen)
-		}
-
-		_, err = rfd.Seek(int64(offset), io.SeekStart)
-		if err != nil {
-			return err
-		}
-
-		var r io.Reader = &contextReaderWrapper{R: rfd, ctx: req.Context}
-		count, found := req.Options[filesCountOptionName].(int64)
-		if found {
-			if count < 0 {
-				return fmt.Errorf("cannot specify negative 'count'")
-			}
-			r = io.LimitReader(r, int64(count))
-		}
-		return res.Emit(r)
+		return res.Emit(rc)
 	},
-}
-
-type contextReader interface {
-	CtxReadFull(context.Context, []byte) (int, error)
-}
-
-type contextReaderWrapper struct {
-	R   contextReader
-	ctx context.Context
-}
-
-func (crw *contextReaderWrapper) Read(b []byte) (int, error) {
-	return crw.R.CtxReadFull(crw.ctx, b)
 }
 
 var filesMvCmd = &cmds.Command{
@@ -636,20 +375,7 @@ Example:
 
 		flush, _ := req.Options[filesFlushOptionName].(bool)
 
-		src, err := checkPath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		dst, err := checkPath(req.Arguments[1])
-		if err != nil {
-			return err
-		}
-
-		err = mfs.Mv(nd.FilesRoot, src, dst)
-		if err == nil && flush {
-			_, err = mfs.FlushPath(req.Context, nd.FilesRoot, "/")
-		}
-		return err
+		return fileshelpers.Move(req.Context, nd.FilesRoot, req.Arguments[0], req.Arguments[1], &iface.FilesMoveOptions{Flush: flush})
 	},
 }
 
@@ -710,18 +436,13 @@ stat' on the file or any of its ancestors.
 		hashOption,
 	},
 	Run: func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (retErr error) {
-		path, err := checkPath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-
 		create, _ := req.Options[filesCreateOptionName].(bool)
 		mkParents, _ := req.Options[filesParentsOptionName].(bool)
 		trunc, _ := req.Options[filesTruncateOptionName].(bool)
 		flush, _ := req.Options[filesFlushOptionName].(bool)
 		rawLeaves, rawLeavesDef := req.Options[filesRawLeavesOptionName].(bool)
 
-		prefix, err := getPrefixNew(req)
+		prefix, err := getPrefix(req)
 		if err != nil {
 			return err
 		}
@@ -731,70 +452,21 @@ stat' on the file or any of its ancestors.
 			return err
 		}
 
-		offset, _ := req.Options[filesOffsetOptionName].(int64)
-		if offset < 0 {
-			return fmt.Errorf("cannot have negative write offset")
-		}
-
-		if mkParents {
-			err := ensureContainingDirectoryExists(nd.FilesRoot, path, prefix)
-			if err != nil {
-				return err
-			}
-		}
-
-		fi, err := getFileHandle(nd.FilesRoot, path, create, prefix)
-		if err != nil {
-			return err
-		}
-		if rawLeavesDef {
-			fi.RawLeaves = rawLeaves
-		}
-
-		wfd, err := fi.Open(mfs.Flags{Write: true, Sync: flush})
-		if err != nil {
-			return err
-		}
-
-		defer func() {
-			err := wfd.Close()
-			if err != nil {
-				if retErr == nil {
-					retErr = err
-				} else {
-					log.Error("files: error closing file mfs file descriptor", err)
-				}
-			}
-		}()
-
-		if trunc {
-			if err := wfd.Truncate(0); err != nil {
-				return err
-			}
-		}
-
-		count, countfound := req.Options[filesCountOptionName].(int64)
-		if countfound && count < 0 {
-			return fmt.Errorf("cannot have negative byte count")
-		}
-
-		_, err = wfd.Seek(int64(offset), io.SeekStart)
-		if err != nil {
-			flog.Error("seekfail: ", err)
-			return err
-		}
-
 		var r io.Reader
 		r, err = cmdenv.GetFileArg(req.Files.Entries())
 		if err != nil {
 			return err
 		}
-		if countfound {
-			r = io.LimitReader(r, int64(count))
-		}
 
-		_, err = io.Copy(wfd, r)
-		return err
+		return fileshelpers.Write(req.Context, nd.FilesRoot, req.Arguments[0], r, &iface.FilesWriteOptions{
+			Create:            create,
+			MakeParents:       mkParents,
+			Truncate:          trunc,
+			Flush:             flush,
+			RawLeaves:         rawLeaves,
+			RawLeavesOverride: rawLeavesDef,
+			CidBuilder:        prefix,
+		})
 	},
 }
 
@@ -831,26 +503,18 @@ Examples:
 		}
 
 		dashp, _ := req.Options[filesParentsOptionName].(bool)
-		dirtomake, err := checkPath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-
 		flush, _ := req.Options[filesFlushOptionName].(bool)
 
 		prefix, err := getPrefix(req)
 		if err != nil {
 			return err
 		}
-		root := n.FilesRoot
 
-		err = mfs.Mkdir(root, dirtomake, mfs.MkdirOpts{
-			Mkparents:  dashp,
-			Flush:      flush,
-			CidBuilder: prefix,
+		return fileshelpers.Mkdir(req.Context, n.FilesRoot, req.Arguments[0], &iface.FilesMkdirOptions{
+			MakeParents: dashp,
+			Flush:       flush,
+			CidBuilder:  prefix,
 		})
-
-		return err
 	},
 }
 
@@ -921,38 +585,16 @@ Change the cid version or hash function of the root node of a given path.
 		}
 
 		flush, _ := req.Options[filesFlushOptionName].(bool)
-
 		prefix, err := getPrefix(req)
 		if err != nil {
 			return err
 		}
 
-		err = updatePath(nd.FilesRoot, path, prefix)
-		if err == nil && flush {
-			_, err = mfs.FlushPath(req.Context, nd.FilesRoot, path)
-		}
-		return err
+		return fileshelpers.ChangeCid(req.Context, nd.FilesRoot, path, &iface.FilesChangeCidOptions{
+			CidBuilder: prefix,
+			Flush:      flush,
+		})
 	},
-}
-
-func updatePath(rt *mfs.Root, pth string, builder cid.Builder) error {
-	if builder == nil {
-		return nil
-	}
-
-	nd, err := mfs.Lookup(rt, pth)
-	if err != nil {
-		return err
-	}
-
-	switch n := nd.(type) {
-	case *mfs.Directory:
-		n.SetCidBuilder(builder)
-	default:
-		return fmt.Errorf("can only update directories")
-	}
-
-	return nil
 }
 
 var filesRmCmd = &cmds.Command{
@@ -983,97 +625,14 @@ Remove files or directories.
 			return err
 		}
 
-		path, err := checkPath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-
-		if path == "/" {
-			return fmt.Errorf("cannot delete root")
-		}
-
-		// 'rm a/b/c/' will fail unless we trim the slash at the end
-		if path[len(path)-1] == '/' {
-			path = path[:len(path)-1]
-		}
-
-		// if '--force' specified, it will remove anything else,
-		// including file, directory, corrupted node, etc
 		force, _ := req.Options[forceOptionName].(bool)
+		recursive, _ := req.Options[recursiveOptionName].(bool)
 
-		dir, name := gopath.Split(path)
-
-		pdir, err := getParentDir(nd.FilesRoot, dir)
-		if err != nil {
-			if force && err == os.ErrNotExist {
-				return nil
-			}
-			return fmt.Errorf("parent lookup: %s", err)
-		}
-
-		if force {
-			err := pdir.Unlink(name)
-			if err != nil {
-				if err == os.ErrNotExist {
-					return nil
-				}
-				return err
-			}
-			return pdir.Flush()
-		}
-
-		// get child node by name, when the node is corrupted and nonexistent,
-		// it will return specific error.
-		child, err := pdir.Child(name)
-		if err != nil {
-			return err
-		}
-
-		dashr, _ := req.Options[recursiveOptionName].(bool)
-
-		switch child.(type) {
-		case *mfs.Directory:
-			if !dashr {
-				return fmt.Errorf("%s is a directory, use -r to remove directories", path)
-			}
-		}
-
-		err = pdir.Unlink(name)
-		if err != nil {
-			return err
-		}
-
-		return pdir.Flush()
+		return fileshelpers.Remove(req.Context, nd.FilesRoot, req.Arguments[0], &iface.FilesRemoveOptions{
+			Force:     force,
+			Recursive: recursive,
+		})
 	},
-}
-
-func getPrefixNew(req *cmds.Request) (cid.Builder, error) {
-	cidVer, cidVerSet := req.Options[filesCidVersionOptionName].(int)
-	hashFunStr, hashFunSet := req.Options[filesHashOptionName].(string)
-
-	if !cidVerSet && !hashFunSet {
-		return nil, nil
-	}
-
-	if hashFunSet && cidVer == 0 {
-		cidVer = 1
-	}
-
-	prefix, err := dag.PrefixForCidVersion(cidVer)
-	if err != nil {
-		return nil, err
-	}
-
-	if hashFunSet {
-		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
-		if !ok {
-			return nil, fmt.Errorf("unrecognized hash function: %s", strings.ToLower(hashFunStr))
-		}
-		prefix.MhType = hashFunCode
-		prefix.MhLength = -1
-	}
-
-	return &prefix, nil
 }
 
 func getPrefix(req *cmds.Request) (cid.Builder, error) {
@@ -1103,95 +662,4 @@ func getPrefix(req *cmds.Request) (cid.Builder, error) {
 	}
 
 	return &prefix, nil
-}
-
-func ensureContainingDirectoryExists(r *mfs.Root, path string, builder cid.Builder) error {
-	dirtomake := gopath.Dir(path)
-
-	if dirtomake == "/" {
-		return nil
-	}
-
-	return mfs.Mkdir(r, dirtomake, mfs.MkdirOpts{
-		Mkparents:  true,
-		CidBuilder: builder,
-	})
-}
-
-func getFileHandle(r *mfs.Root, path string, create bool, builder cid.Builder) (*mfs.File, error) {
-	target, err := mfs.Lookup(r, path)
-	switch err {
-	case nil:
-		fi, ok := target.(*mfs.File)
-		if !ok {
-			return nil, fmt.Errorf("%s was not a file", path)
-		}
-		return fi, nil
-
-	case os.ErrNotExist:
-		if !create {
-			return nil, err
-		}
-
-		// if create is specified and the file doesnt exist, we create the file
-		dirname, fname := gopath.Split(path)
-		pdir, err := getParentDir(r, dirname)
-		if err != nil {
-			return nil, err
-		}
-
-		if builder == nil {
-			builder = pdir.GetCidBuilder()
-		}
-
-		nd := dag.NodeWithData(ft.FilePBData(nil, 0))
-		nd.SetCidBuilder(builder)
-		err = pdir.AddChild(fname, nd)
-		if err != nil {
-			return nil, err
-		}
-
-		fsn, err := pdir.Child(fname)
-		if err != nil {
-			return nil, err
-		}
-
-		fi, ok := fsn.(*mfs.File)
-		if !ok {
-			return nil, errors.New("expected *mfs.File, didnt get it. This is likely a race condition")
-		}
-		return fi, nil
-
-	default:
-		return nil, err
-	}
-}
-
-func checkPath(p string) (string, error) {
-	if len(p) == 0 {
-		return "", fmt.Errorf("paths must not be empty")
-	}
-
-	if p[0] != '/' {
-		return "", fmt.Errorf("paths must start with a leading slash")
-	}
-
-	cleaned := gopath.Clean(p)
-	if p[len(p)-1] == '/' && p != "/" {
-		cleaned += "/"
-	}
-	return cleaned, nil
-}
-
-func getParentDir(root *mfs.Root, dir string) (*mfs.Directory, error) {
-	parent, err := mfs.Lookup(root, dir)
-	if err != nil {
-		return nil, err
-	}
-
-	pdir, ok := parent.(*mfs.Directory)
-	if !ok {
-		return nil, errors.New("expected *mfs.Directory, didnt get it. This is likely a race condition")
-	}
-	return pdir, nil
 }
