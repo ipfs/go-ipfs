@@ -13,7 +13,20 @@ PATH := $(realpath $(d)):$(PATH)
 # DEPS_OO_$(d) += merkledag/pb/merkledag.pb.go namesys/pb/namesys.pb.go
 # DEPS_OO_$(d) += pin/internal/pb/header.pb.go unixfs/pb/unixfs.pb.go
 
-$(d)_flags =-ldflags="-X "github.com/ipfs/go-ipfs".CurrentCommit=$(git-hash)"
+DATE := $(shell date +%FT%T%z)
+USER := $(shell whoami)
+GIT_VERSION := $(shell git --no-pager describe --tags --always --dirty)
+GIT_REVISION := $(shell git rev-parse HEAD)
+BRANCH := $(shell git branch | grep "*" | cut -d ' ' -f2)
+
+$(d)_flags =-ldflags "
+$(d)_flags := $($(d)_flags)-X github.com/ipfs/go-ipfs.CurrentCommit=$(git-hash) 
+$(d)_flags := $($(d)_flags)-X github.com/prometheus/common/version.Version=$(GIT_VERSION) 
+$(d)_flags := $($(d)_flags)-X github.com/prometheus/common/version.BuildDate=$(DATE) 
+$(d)_flags := $($(d)_flags)-X github.com/prometheus/common/version.Branch=$(BRANCH) 
+$(d)_flags := $($(d)_flags)-X github.com/prometheus/common/version.Revision=$(GIT_REVISION) 
+$(d)_flags := $($(d)_flags)-X github.com/prometheus/common/version.BuildUser=$(USER) 
+$(d)_flags := $($(d)_flags)"
 
 $(d)-try-build $(IPFS_BIN_$(d)): GOFLAGS += $(cmd/ipfs_flags)
 
