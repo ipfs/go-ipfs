@@ -55,6 +55,17 @@ test_expect_success "ipfs repo gc fully reverse ipfs add (part 1)" '
   ipfs pin rm -r $hash &&
   ipfs repo gc
 '
+test_expect_success "'ipfs repo gc --silent' succeeds (no output)" '
+  echo "should be empty" >bfile &&
+  HASH2=`ipfs add -q bfile` &&
+  ipfs cat "$HASH2" >expected11 &&
+  test_cmp expected11 bfile &&
+  ipfs pin rm -r "$HASH2" &&
+  ipfs repo gc --silent >gc_out_empty &&
+  test_cmp /dev/null gc_out_empty &&
+  test_must_fail ipfs cat "$HASH2" 2>err_expected1 &&
+  grep "Error: merkledag: not found" err_expected1
+'
 
 test_kill_ipfs_daemon
 
