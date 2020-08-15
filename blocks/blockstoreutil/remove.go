@@ -48,7 +48,7 @@ func RmBlocks(ctx context.Context, blocks bs.GCBlockstore, pins pin.Pinner, cids
 		for _, c := range stillOkay {
 			// Kept for backwards compatibility. We may want to
 			// remove this sometime in the future.
-			has, err := blocks.Has(c)
+			has, err := blocks.Has(ctx, c)
 			if err != nil {
 				out <- &RemovedBlock{Hash: c.String(), Error: err.Error()}
 				continue
@@ -58,7 +58,7 @@ func RmBlocks(ctx context.Context, blocks bs.GCBlockstore, pins pin.Pinner, cids
 				continue
 			}
 
-			err = blocks.DeleteBlock(c)
+			err = blocks.DeleteBlock(ctx, c)
 			if err != nil {
 				out <- &RemovedBlock{Hash: c.String(), Error: err.Error()}
 			} else if !opts.Quiet {

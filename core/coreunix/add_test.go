@@ -327,16 +327,16 @@ type testBlockstore struct {
 	countAtOffsetNonZero int
 }
 
-func (bs *testBlockstore) Put(block blocks.Block) error {
+func (bs *testBlockstore) Put(ctx context.Context, block blocks.Block) error {
 	bs.CheckForPosInfo(block)
-	return bs.GCBlockstore.Put(block)
+	return bs.GCBlockstore.Put(ctx, block)
 }
 
-func (bs *testBlockstore) PutMany(blocks []blocks.Block) error {
+func (bs *testBlockstore) PutMany(ctx context.Context, blocks []blocks.Block) error {
 	for _, blk := range blocks {
 		bs.CheckForPosInfo(blk)
 	}
-	return bs.GCBlockstore.PutMany(blocks)
+	return bs.GCBlockstore.PutMany(ctx, blocks)
 }
 
 func (bs *testBlockstore) CheckForPosInfo(block blocks.Block) {

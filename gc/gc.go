@@ -80,7 +80,7 @@ func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn 
 					break loop
 				}
 				if !gcs.Has(k) {
-					err := bs.DeleteBlock(k)
+					err := bs.DeleteBlock(ctx, k)
 					removed++
 					if err != nil {
 						errors = true

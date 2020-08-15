@@ -76,7 +76,7 @@ func (api *DhtAPI) Provide(ctx context.Context, path path.Path, opts ...caopts.D
 
 	c := rp.Cid()
 
-	has, err := api.blockstore.Has(c)
+	has, err := api.blockstore.Has(ctx, c)
 	if err != nil {
 		return err
 	}

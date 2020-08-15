@@ -59,7 +59,7 @@ func IpnsDsKey(id peer.ID) ds.Key {
 // This method will not search the routing system for records published by other
 // nodes.
 func (p *IpnsPublisher) ListPublished(ctx context.Context) (map[peer.ID]*pb.IpnsEntry, error) {
-	query, err := p.ds.Query(dsquery.Query{
+	query, err := p.ds.Query(ctx, dsquery.Query{
 		Prefix: ipnsPrefix,
 	})
 	if err != nil {
@@ -109,7 +109,7 @@ func (p *IpnsPublisher) GetPublished(ctx context.Context, id peer.ID, checkRouti
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
 
-	value, err := p.ds.Get(IpnsDsKey(id))
+	value, err := p.ds.Get(ctx, IpnsDsKey(id))
 	switch err {
 	case nil:
 	case ds.ErrNotFound:
@@ -179,10 +179,10 @@ func (p *IpnsPublisher) updateRecord(ctx context.Context, k ci.PrivKey, value pa
 
 	// Put the new record.
 	key := IpnsDsKey(id)
-	if err := p.ds.Put(key, data); err != nil {
+	if err := p.ds.Put(ctx, key, data); err != nil {
 		return nil, err
 	}
-	if err := p.ds.Sync(key); err != nil {
+	if err := p.ds.Sync(ctx, key); err != nil {
 		return nil, err
 	}
 	return entry, nil

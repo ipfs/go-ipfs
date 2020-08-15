@@ -380,7 +380,7 @@ Maximum supported CAR version: 1
 
 				ret := RootMeta{Cid: c}
 
-				if block, err := node.Blockstore.Get(c); err != nil {
+				if block, err := node.Blockstore.Get(req.Context, c); err != nil {
 					ret.PinErrorMsg = err.Error()
 				} else if nd, err := ipld.Decode(block); err != nil {
 					ret.PinErrorMsg = err.Error()

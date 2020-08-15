@@ -49,7 +49,7 @@ func (api *BlockAPI) Put(ctx context.Context, src io.Reader, opts ...caopts.Bloc
 		defer api.blockstore.PinLock().Unlock()
 	}
 
-	err = api.blocks.AddBlock(b)
+	err = api.blocks.AddBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}

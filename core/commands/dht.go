@@ -262,7 +262,7 @@ var provideRefDhtCmd = &cmds.Command{
 				return err
 			}
 
-			has, err := nd.Blockstore.Has(c)
+			has, err := nd.Blockstore.Has(req.Context, c)
 			if err != nil {
 				return err
 			}

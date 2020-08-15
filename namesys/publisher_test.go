@@ -94,7 +94,7 @@ func testNamekeyPublisher(t *testing.T, keyType int, expectedErr error, expected
 
 	// Also check datastore for completeness
 	key := dshelp.NewKeyFromBinary([]byte(namekey))
-	exists, err := dstore.Has(key)
+	exists, err := dstore.Has(ctx, key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ type checkSyncDS struct {
 	syncKeys map[ds.Key]struct{}
 }
 
-func (d *checkSyncDS) Sync(prefix ds.Key) error {
+func (d *checkSyncDS) Sync(ctx context.Context, prefix ds.Key) error {
 	d.syncKeys[prefix] = struct{}{}
-	return d.Datastore.Sync(prefix)
+	return d.Datastore.Sync(ctx, prefix)
 }

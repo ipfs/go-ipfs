@@ -126,7 +126,7 @@ func (rp *Republisher) republishEntry(ctx context.Context, priv ic.PrivKey) erro
 	log.Debugf("republishing ipns entry for %s", id)
 
 	// Look for it locally only
-	p, err := rp.getLastVal(id)
+	p, err := rp.getLastVal(ctx, id)
 	if err != nil {
 		if err == errNoEntry {
 			return nil
@@ -139,9 +139,9 @@ func (rp *Republisher) republishEntry(ctx context.Context, priv ic.PrivKey) erro
 	return rp.ns.PublishWithEOL(ctx, priv, p, eol)
 }
 
-func (rp *Republisher) getLastVal(id peer.ID) (path.Path, error) {
+func (rp *Republisher) getLastVal(ctx context.Context, id peer.ID) (path.Path, error) {
 	// Look for it locally only
-	val, err := rp.ds.Get(namesys.IpnsDsKey(id))
+	val, err := rp.ds.Get(ctx, namesys.IpnsDsKey(id))
 	switch err {
 	case nil:
 	case ds.ErrNotFound:

@@ -239,7 +239,7 @@ func verifyWorkerRun(ctx context.Context, wg *sync.WaitGroup, keys <-chan cid.Ci
 	defer wg.Done()
 
 	for k := range keys {
-		_, err := bs.Get(k)
+		_, err := bs.Get(ctx, k)
 		if err != nil {
 			select {
 			case results <- fmt.Sprintf("block %s was corrupt (%s)", k, err):

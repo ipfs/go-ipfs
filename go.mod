@@ -29,11 +29,11 @@ require (
 	github.com/ipfs/go-filestore v0.0.3
 	github.com/ipfs/go-fs-lock v0.0.5
 	github.com/ipfs/go-graphsync v0.0.5
-	github.com/ipfs/go-ipfs-blockstore v0.1.4
+	github.com/ipfs/go-ipfs-blockstore v1.0.0
 	github.com/ipfs/go-ipfs-chunker v0.0.5
 	github.com/ipfs/go-ipfs-cmds v0.3.0
 	github.com/ipfs/go-ipfs-config v0.9.0
-	github.com/ipfs/go-ipfs-ds-help v0.1.1
+	github.com/ipfs/go-ipfs-ds-help v1.0.0
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
 	github.com/ipfs/go-ipfs-files v0.0.8
@@ -112,6 +112,27 @@ require (
 	golang.org/x/sys v0.0.0-20200523222454-059865788121
 	golang.org/x/tools v0.0.0-20200522201501-cb1345f3a375 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
+)
+
+replace (
+	github.com/ipfs/go-bitswap => github.com/MichaelMure/go-bitswap v0.2.20-0.20200720173351-71e8bd0a1b1a
+	github.com/ipfs/go-blockservice => github.com/MichaelMure/go-blockservice v0.1.4-0.20200720174746-aaf978f8c7e2
+	github.com/ipfs/go-datastore => github.com/MichaelMure/go-datastore v0.1.1-0.20200720160526-a840b6a243a7
+	github.com/ipfs/go-ds-badger => github.com/MichaelMure/go-ds-badger v0.0.8-0.20200720160655-efad091216d6
+	github.com/ipfs/go-ds-flatfs => github.com/MichaelMure/go-ds-flatfs v0.1.1-0.20200720153411-098af07a315f
+	github.com/ipfs/go-ds-leveldb => github.com/MichaelMure/go-ds-leveldb v0.1.1-0.20200720161456-f8de4f0cb528
+	github.com/ipfs/go-ds-measure => github.com/MichaelMure/go-ds-measure v0.0.2-0.20200720154401-7670e7876069
+	github.com/ipfs/go-filestore => github.com/MichaelMure/go-filestore v1.0.1-0.20200720201744-9d0dd571946e
+	github.com/ipfs/go-ipfs-blockstore => github.com/MichaelMure/go-ipfs-blockstore v1.0.1-0.20200720163520-6daba4f3daa0
+	github.com/ipfs/go-ipfs-exchange-interface => github.com/MichaelMure/go-ipfs-exchange-interface v0.0.2-0.20200720171619-b6887ed2e001
+	github.com/ipfs/go-ipfs-exchange-offline => github.com/MichaelMure/go-ipfs-exchange-offline v0.0.2-0.20200720172012-8e028686ae1e
+	github.com/ipfs/go-ipfs-provider => github.com/MichaelMure/go-ipfs-provider v0.2.2-0.20200720181729-c6b88a2c5d79
+	github.com/ipfs/go-ipfs-routing => github.com/MichaelMure/go-ipfs-routing v0.1.1-0.20200720164918-a1a2e00f1a0e
+	github.com/ipfs/go-merkledag => github.com/MichaelMure/go-merkledag v0.2.1-0.20200720175629-7f5b5e19fa8c
+	github.com/libp2p/go-libp2p-kad-dht => github.com/MichaelMure/go-libp2p-kad-dht v0.0.0-20200721082318-ffb18adb50cb
+	github.com/ipfs/go-ipfs-pinner => github.com/MichaelMure/go-ipfs-pinner v0.0.0-20200721082940-4cae5f9fa49d
+	github.com/libp2p/go-libp2p-pubsub-router => github.com/MichaelMure/go-libp2p-pubsub-router v0.3.1-0.20200722090547-ec92a4e5678b
+	github.com/ipfs/go-graphsync => github.com/MichaelMure/go-graphsync v0.0.6-0.20200722092520-d944aa3c7da9
 )
 
 go 1.13
