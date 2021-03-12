@@ -20,16 +20,16 @@ test_dag_git() {
     find objects -type f -exec ipfs dag put --format=git --input-enc=zlib {} \; -exec echo \; > hashes
   '
 
-  test_expect_success "successfully get added objects" '
+  test_expect_failure "successfully get added objects" '
     cat hashes | xargs -I {} ipfs dag get -- {} > /dev/null
   '
 
-  test_expect_success "path traversals work" '
+  test_expect_failure "path traversals work" '
     echo \"YmxvYiA3ACcsLnB5Zgo=\" > file1 &&
     ipfs dag get baf4bcfhzi72pcj5cc4ocz7igcduubuu7aa3cddi/object/parents/0/tree/dir2/hash/f3/hash > out1
   '
 
-  test_expect_success "outputs look correct" '
+  test_expect_failure "outputs look correct" '
     test_cmp file1 out1
   '
 }
