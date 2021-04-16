@@ -77,8 +77,8 @@ into an object of the specified format.
 		cmds.FileArg("object data", true, true, "The object to put").EnableStdin(),
 	},
 	Options: []cmds.Option{
-		cmds.StringOption("format", "f", "Format that the object will be added as.").WithDefault("cbor"),
-		cmds.StringOption("input-enc", "Format that the input object will be.").WithDefault("json"),
+		cmds.StringOption("format", "f", "Format that the object will be added as.").WithDefault("dag-cbor"),
+		cmds.StringOption("input-enc", "Format that the input object will be.").WithDefault("dag-json"),
 		cmds.BoolOption("pin", "Pin this object when adding."),
 		cmds.StringOption("hash", "Hash function to use").WithDefault(""),
 	},

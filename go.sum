@@ -443,10 +443,14 @@ github.com/ipfs/go-ipld-format v0.0.1/go.mod h1:kyJtbkDALmFHv3QR6et67i35QzO3S0dC
 github.com/ipfs/go-ipld-format v0.0.2/go.mod h1:4B6+FM2u9OJ9zCV+kSbgFAZlOrv1Hqbf0INGQgiKf9k=
 github.com/ipfs/go-ipld-format v0.2.0 h1:xGlJKkArkmBvowr+GMCX0FEZtkro71K1AwiKnL37mwA=
 github.com/ipfs/go-ipld-format v0.2.0/go.mod h1:3l3C1uKoadTPbeNfrDi+xMInYKlx2Cvg1BuydPSdzQs=
-github.com/ipfs/go-ipld-git v0.0.3 h1:/YjkjCyo5KYRpW+suby8Xh9Cm/iH9dAgGV6qyZ1dGus=
-github.com/ipfs/go-ipld-git v0.0.3/go.mod h1:RuvMXa9qtJpDbqngyICCU/d+cmLFXxLsbIclmD0Lcr0=
 github.com/ipfs/go-ipld-legacy v0.0.0-20210325015318-9799f2cffab0 h1:PXjRvJkxqQ2EbwviF5GEURYqvhS/ulee/ZdVsVgVtHM=
 github.com/ipfs/go-ipld-legacy v0.0.0-20210325015318-9799f2cffab0/go.mod h1:86f5P/srAmh9GcIcWQR9lfFLZPrIyyXQeVlOWeeWEuI=
+github.com/ipfs/go-ipld-git v0.0.4-0.20210324174925-515bc5cab461 h1:bb97BkhX2Mc9EbwwYLK/rDXoofhkSjpALO//rlxgUw8=
+github.com/ipfs/go-ipld-git v0.0.4-0.20210324174925-515bc5cab461/go.mod h1:jtK6vhzvHtNm2YhKRxKMR8IQJAoZRtYoWqf8RnDeaIA=
+github.com/ipfs/go-ipld-git v0.0.4-0.20210326054912-6be33ddcbecc h1:57luC/Oc36sZBp4BAJ74MJGsAULBeQ5NLLRpTL6YJwI=
+github.com/ipfs/go-ipld-git v0.0.4-0.20210326054912-6be33ddcbecc/go.mod h1:jtK6vhzvHtNm2YhKRxKMR8IQJAoZRtYoWqf8RnDeaIA=
+github.com/ipfs/go-ipld-legacy v0.0.0-20210312014519-2895f54096d5 h1:5RLoebNIGmHmlcdTSdVrXGRF5sLy/wTiCUgWMeJvIII=
+github.com/ipfs/go-ipld-legacy v0.0.0-20210312014519-2895f54096d5/go.mod h1:1wv+3vTMw6axVoAJFisWzJ7tewUnrcr6AxymcZrd83k=
 github.com/ipfs/go-ipns v0.0.2 h1:oq4ErrV4hNQ2Eim257RTYRgfOSV/s8BDaf9iIl4NwFs=
 github.com/ipfs/go-ipns v0.0.2/go.mod h1:WChil4e0/m9cIINWLxZe1Jtf77oz5L05rO2ei/uKJ5U=
 github.com/ipfs/go-log v0.0.1/go.mod h1:kL1d2/hzSpI0thNYjiKfjanbVNU+IIGA/WnNESY9leM=
@@ -498,6 +502,7 @@ github.com/ipld/go-codec-dagpb v1.0.2-0.20210308154810-d05d02fa186e/go.mod h1:oY
 github.com/ipld/go-codec-dagpb v1.2.0/go.mod h1:6nBN7X7h8EOsEejZGqC7tej5drsdBAXbMHyBT+Fne5s=
 github.com/ipld/go-codec-dagpb v1.2.1-0.20210405170603-d0b86f7623c2 h1:m/ZZEoOdswHrrcikTC+fX4x6tnevJs0hoyNzijlT41A=
 github.com/ipld/go-codec-dagpb v1.2.1-0.20210405170603-d0b86f7623c2/go.mod h1:GMLfso6KSkYJlIbd2cGKdGMe/hM5/IukeXRQ+u6zTrQ=
+github.com/ipld/go-ipld-prime v0.7.0/go.mod h1:0xEgdD6MKbZ1vF0GC+YcR/C4SQCAlRuOjIJ2i0HxqzM=
 github.com/ipld/go-ipld-prime v0.7.1-0.20210225173718-8fef5312eb12/go.mod h1:0xEgdD6MKbZ1vF0GC+YcR/C4SQCAlRuOjIJ2i0HxqzM=
 github.com/ipld/go-ipld-prime v0.7.1-0.20210312004928-8a500e6b8a62/go.mod h1:ZwznT3awHhuBoB0SgGxSo8SZEg6XbQtsZ6WahL9r9z0=
 github.com/ipld/go-ipld-prime v0.9.0/go.mod h1:KvBLMr4PX1gWptgkzRjVZCrLmSGcZCb/jioOQwCqZN8=
@@ -944,6 +949,8 @@ github.com/multiformats/go-multiaddr-net v0.2.0/go.mod h1:gGdH3UXny6U3cKKYCvpXI5
 github.com/multiformats/go-multibase v0.0.1/go.mod h1:bja2MqRZ3ggyXtZSEDKpl0uO/gviWFaSteVbWT51qgs=
 github.com/multiformats/go-multibase v0.0.3 h1:l/B6bJDQjvQ5G52jw4QGSYeOTZoAwIO77RblWplfIqk=
 github.com/multiformats/go-multibase v0.0.3/go.mod h1:5+1R4eQrT3PkYZ24C3W2Ue2tPwIdYQD509ZjSb5y9Oc=
+github.com/multiformats/go-multicodec v0.2.1-0.20210319221629-f3663dccaeee h1:vtZuPSrgEZgX575pCi849q2ms6HIsyVSDWVwE7Mqr2g=
+github.com/multiformats/go-multicodec v0.2.1-0.20210319221629-f3663dccaeee/go.mod h1:/y4YVwkfMyry5kFbMTbLJKErhycTIftytRV+llXdyS4=
 github.com/multiformats/go-multihash v0.0.1/go.mod h1:w/5tugSrLEbWqlcgJabL3oHFKTwfvkofsjW2Qa1ct4U=
 github.com/multiformats/go-multihash v0.0.5/go.mod h1:lt/HCbqlQwlPBz7lv0sQCdtfcMtlJvakRUn/0Ual8po=
 github.com/multiformats/go-multihash v0.0.8/go.mod h1:YSLudS+Pi8NHE7o6tb3D8vrpKa63epEDmG8nTduyAew=

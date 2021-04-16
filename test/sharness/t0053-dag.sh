@@ -25,18 +25,31 @@ test_expect_success "make an ipld object in json" '
   printf "{\"hello\":\"world\",\"cats\":[{\"/\":\"%s\"},{\"water\":{\"/\":\"%s\"}}],\"magic\":{\"/\":\"%s\"},\"sub\":{\"dict\":\"ionary\",\"beep\":[0,\"bop\"]}}" $HASH1 $HASH2 $HASH3 > ipld_object
 '
 
+test_expect_success "make an ipld object in dag-json" '
+  echo "omREYXRhT6JkRGF0YWF4ZUxpbmtzgGVMaW5rc4A=" | base64 -d > ipld_object_pb
+'
+
+
 test_dag_cmd() {
-  test_expect_success "can add an ipld object using protobuf" '
-    IPLDHASH=$(cat ipld_object | ipfs dag put -f protobuf)
+  test_expect_success "can add an ipld object using dag-json" '
+    IPLDHASH=$(cat ipld_object | ipfs dag put --input-enc=dag-json -f dag-cbor)
+  '
+
+  test_expect_success "can add an ipld object using dag-json" '
+    IPLDPBHASH=$(cat ipld_object_pb | ipfs dag put --input-enc=dag-cbor -f dag-pb)
+  '
+
+  test_expect_success "can add an ipld object using dag-json" '
+    IPLDCBORHASH=$(cat ipld_object_pb | ipfs dag put --input-enc=dag-cbor -f dag-cbor)
   '
 
   test_expect_success "output looks correct" '
-    EXPHASH="QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n"
+    EXPHASH="bafyreicktrf5jt6zu2npbojxx2onikqqdihoj2xutehmkmzrsw5bo5zgge"
     test $EXPHASH = $IPLDHASH
   '
 
   test_expect_success "can add an ipld object using protobuf and --cid=base=base32" '
-    IPLDHASHb32=$(cat ipld_object | ipfs dag put -f protobuf --cid-base=base32)
+    IPLDHASHb32=$(cat ipld_object | ipfs dag put --input-enc=dag-json -f dag-cbor --cid-base=base32)
   '
 
   test_expect_success "output looks correct (does not upgrade to CIDv1)" '
@@ -48,7 +61,7 @@ test_dag_cmd() {
   '
 
   test_expect_success "output looks correct" '
-    EXPHASH="bafyreidjtjfmavdk7epvztob2m5vlm3pxp3gjmpyewro4qlbw5n4f4iz64"
+    EXPHASH="bafyreicktrf5jt6zu2npbojxx2onikqqdihoj2xutehmkmzrsw5bo5zgge"
     test $EXPHASH = $IPLDHASH
   '
 
@@ -97,13 +110,17 @@ test_dag_cmd() {
     ipfs pin add $EXPHASH
   '
 
+  test_expect_success "can pin dag object" '
+    ipfs pin add $IPLDPBHASH
+  '
+
   test_expect_success "after gc, objects still accessible" '
     ipfs repo gc > /dev/null &&
     ipfs refs -r --timeout=2s $EXPHASH > /dev/null
   '
 
   test_expect_success "can get object" '
-    ipfs dag get $IPLDHASH > ipld_obj_out
+    ipfs dag get $IPLDPBHASH > ipld_obj_out
   '
 
   test_expect_success "object links look right" '
@@ -111,8 +128,8 @@ test_dag_cmd() {
   '
 
   test_expect_success "retrieved object hashes back correctly" '
-    IPLDHASH2=$(cat ipld_obj_out | ipfs dag put) &&
-    test "$IPLDHASH" = "$IPLDHASH2"
+    IPLDHASH2=$(cat ipld_obj_out | ipfs dag put --input-enc=dag-json -f dag-cbor) &&
+    test "$IPLDCBORHASH" = "$IPLDHASH2"
   '
 
   test_expect_success "add a normal file" '
@@ -138,19 +155,18 @@ test_dag_cmd() {
   '
 
   test_expect_success "non-canonical cbor input is normalized" '
-    HASH=$(cat ../t0053-dag-data/non-canon.cbor | ipfs dag put --format=cbor --input-enc=raw) &&
-    test $HASH = "bafyreiawx7ona7oa2ptcoh6vwq4q6bmd7x2ibtkykld327bgb7t73ayrqm" ||
+    HASH=$(cat ../t0053-dag-data/non-canon.cbor | ipfs dag put --format=dag-cbor --input-enc=dag-cbor) &&
+    test $HASH = "bafyreicfngo3hexoxbbwsm64apbydw5fyeruyrfwiyxlj3f4wuzdyztd4m" ||
     test_fsh echo $HASH
   '
 
-  test_expect_success "non-canonical cbor input is normalized with input-enc cbor" '
-    HASH=$(cat ../t0053-dag-data/non-canon.cbor | ipfs dag put --format=cbor --input-enc=cbor) &&
-    test $HASH = "bafyreiawx7ona7oa2ptcoh6vwq4q6bmd7x2ibtkykld327bgb7t73ayrqm" ||
-    test_fsh echo $HASH
+  test_expect_success "cbor input can be fetched" '
+    EXPARR=$(ipfs dag get $HASH/arr)
+    test $EXPARR = "[]"
   '
 
   test_expect_success "add an ipld with pin" '
-    PINHASH=$(printf {\"foo\":\"bar\"} | ipfs dag put --pin=true)
+    PINHASH=$(printf {\"foo\":\"bar\"} | ipfs dag put --input-enc=dag-json --pin=true)
   '
 
   test_expect_success "after gc, objects still accessible" '
@@ -163,7 +179,7 @@ test_dag_cmd() {
   '
 
   test_expect_success "output looks correct" '
-    EXPHASH="bafyriqgae54zjl3bjebmbat2rjem4ewj6vni6jxohandmvk3bibfgv3sioyeidppsghvulryxats43br3b7afa6jy77x6gqzqaicer6ljicck"
+    EXPHASH="bafyriqf6pe376nnoh4ngsxmo7inplk35k5ucdfwvbc547vhp5mxx6wknllub3nyk44pvp37kgzrp2cotebl2onrqg5i7an4rcuu66cnj4ij4i"
     test $EXPHASH = $IPLDHASH
   '
 
@@ -174,7 +190,7 @@ test_dag_cmd() {
 
   test_expect_success "dag put with json dag-pb works" '
     ipfs dag get $HASH > pbjson &&
-    cat pbjson | ipfs dag put --format=dag-pb --input-enc=json > dag_put_out
+    cat pbjson | ipfs dag put --format=dag-pb --input-enc=dag-json > dag_put_out
   '
 
   test_expect_success "dag put with dag-pb works output looks good" '

@@ -130,7 +130,7 @@ test_object_cmd() {
   '
 
   test_expect_failure "'ipfs object put --inputenc=xml' output looks good" '
-    echo "added $HASH\n" >expected &&
+    echo "added $HASH" >expected &&
     test_cmp expected actual
   '
 

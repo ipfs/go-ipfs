@@ -2,17 +2,15 @@ package git
 
 import (
 	"compress/zlib"
-	"fmt"
 	"io"
-	"math"
 
-	"github.com/ipfs/go-ipfs/core/coredag"
 	"github.com/ipfs/go-ipfs/plugin"
 
-	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-ipld-format"
+	// Note that depending on this package registers it's multicodec encoder and decoder.
 	git "github.com/ipfs/go-ipld-git"
-	mh "github.com/multiformats/go-multihash"
+	"github.com/ipld/go-ipld-prime"
+	"github.com/ipld/go-ipld-prime/multicodec"
+	mc "github.com/multiformats/go-multicodec"
 )
 
 // Plugins is exported list of plugins that will be loaded
@@ -22,7 +20,7 @@ var Plugins = []plugin.Plugin{
 
 type gitPlugin struct{}
 
-var _ plugin.PluginIPLD = (*gitPlugin)(nil)
+var _ plugin.Plugin = (*gitPlugin)(nil)
 
 func (*gitPlugin) Name() string {
 	return "ipld-git"
@@ -33,43 +31,19 @@ func (*gitPlugin) Version() string {
 }
 
 func (*gitPlugin) Init(_ *plugin.Environment) error {
+	// register a custom identifier for import of "zlib-incoded git objects."
+	// TODO: give this a name.
+	multicodec.RegisterDecoder(uint64(0x10000000+mc.GitRaw), decodeZlibGit)
 	return nil
 }
 
-func (*gitPlugin) RegisterBlockDecoders(dec format.BlockDecoder) error {
-	dec.Register(cid.GitRaw, git.DecodeBlock)
-	return nil
-}
-
-func (*gitPlugin) RegisterInputEncParsers(iec coredag.InputEncParsers) error {
-	iec.AddParser("raw", "git", parseRawGit)
-	iec.AddParser("zlib", "git", parseZlibGit)
-	return nil
-}
-
-func parseRawGit(r io.Reader, mhType uint64, mhLen int) ([]format.Node, error) {
-	if mhType != math.MaxUint64 && mhType != mh.SHA1 {
-		return nil, fmt.Errorf("unsupported mhType %d", mhType)
-	}
-
-	if mhLen != -1 && mhLen != mh.DefaultLengths[mh.SHA1] {
-		return nil, fmt.Errorf("invalid mhLen %d", mhLen)
-	}
-
-	nd, err := git.ParseObject(r)
-	if err != nil {
-		return nil, err
-	}
-
-	return []format.Node{nd}, nil
-}
-
-func parseZlibGit(r io.Reader, mhType uint64, mhLen int) ([]format.Node, error) {
+func decodeZlibGit(na ipld.NodeAssembler, r io.Reader) error {
 	rc, err := zlib.NewReader(r)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer rc.Close()
-	return parseRawGit(rc, mhType, mhLen)
+
+	return git.Decode(na, rc)
 }
