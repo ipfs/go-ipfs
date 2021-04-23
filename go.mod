@@ -107,3 +107,10 @@ require (
 )
 
 go 1.14
+
+replace github.com/ipfs/go-bitswap => github.com/ipfs/go-bitswap v0.3.4-0.20210423195404-77774fa11f7a
+
+// Dev: To point to the (not fixed) branch (instead of fixed commit):
+// replace github.com/ipfs/go-bitswap => github.com/ipfs/go-bitswap monitor/data-stall
+// Only works with: GOPROXY=direct (https://github.com/golang/go/issues/32955#issuecomment-509318558)
+// Still, the branch name will get rewritten with the commit during first build.

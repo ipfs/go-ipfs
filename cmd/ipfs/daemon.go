@@ -29,6 +29,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo/migrations"
 	sockets "github.com/libp2p/go-socket-activation"
 
+	logging "github.com/ipfs/go-log"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	mprome "github.com/ipfs/go-metrics-prometheus"
 	options "github.com/ipfs/interface-go-ipfs-core/options"
@@ -207,6 +208,13 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// let the user know we're going.
 	fmt.Printf("Initializing daemon...\n")
+
+	if level := os.Getenv("BS_CFG_LOG"); level != "" {
+		logging.SetAllLoggers(logging.LevelWarn)
+		logging.SetLogLevel("bitswap", level)
+		logging.SetLogLevel("engine", level)
+		logging.SetLogLevel("bs:peermgr", level)
+	}
 
 	defer func() {
 		if _err != nil {
