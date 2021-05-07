@@ -109,17 +109,25 @@ test_expect_success "remove direct pin" '
 '
 
 test_expect_success "'ipfs repo gc' removes file" '
-  ipfs repo gc >actual7 &&
-  grep "removed $HASH" actual7
+  ipfs block stat $HASH &&
+  ipfs repo gc &&
+  test_must_fail ipfs block stat $HASH
 '
 
+# Convert all to a base32-multihash as refs local outputs cidv1 raw
+# Technically converting refs local output would suffice, but this is more
+# future proof if we ever switch to adding the files with cid-version 1.
 test_expect_success "'ipfs refs local' no longer shows file" '
   EMPTY_DIR=QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn &&
-  ipfs refs local >actual8 &&
-  grep "QmYCvbfNbCwFR45HiNP45rwJgvatpiW38D961L5qAhUM5Y" actual8 &&
-  grep "$EMPTY_DIR" actual8 &&
-  grep "$HASH_WELCOME_DOCS" actual8 &&
-  test_must_fail grep "$HASH" actual8
+  HASH_MH=`cid-fmt -b base32 "%M" "$HASH"` &&
+  HARDCODED_HASH_MH=`cid-fmt -b base32 "%M" "QmYCvbfNbCwFR45HiNP45rwJgvatpiW38D961L5qAhUM5Y"` &&
+  EMPTY_DIR_MH=`cid-fmt -b base32 "%M" "$EMPTY_DIR"` &&
+  HASH_WELCOME_DOCS_MH=`cid-fmt -b base32 "%M" "$HASH_WELCOME_DOCS"` &&
+  ipfs refs local | cid-fmt -b base32 --filter "%M" >actual8 &&
+  grep "$HARDCODED_HASH_MH" actual8 &&
+  grep "$EMPTY_DIR_MH" actual8 &&
+  grep "$HASH_WELCOME_DOCS_MH" actual8 &&
+  test_must_fail grep "$HASH_MH" actual8
 '
 
 test_expect_success "adding multiblock random file succeeds" '

@@ -136,7 +136,7 @@ var RefsLocalCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "List all local references.",
 		ShortDescription: `
-Displays the hashes of all local objects.
+Displays the hashes of all local objects. NOTE: This treats all local objects as "raw blocks" and returns CIDv1-Raw CIDs.
 `,
 	},
 

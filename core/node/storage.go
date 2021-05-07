@@ -9,7 +9,6 @@ import (
 	"github.com/ipfs/go-filestore"
 	"github.com/ipfs/go-ipfs/core/node/helpers"
 	"github.com/ipfs/go-ipfs/repo"
-	"github.com/ipfs/go-ipfs/thirdparty/cidv0v1"
 	"github.com/ipfs/go-ipfs/thirdparty/verifbs"
 )
 
@@ -41,7 +40,6 @@ func BaseBlockstoreCtor(cacheOpts blockstore.CacheOpts, nilRepo bool, hashOnRead
 		}
 
 		bs = blockstore.NewIdStore(bs)
-		bs = cidv0v1.NewBlockstore(bs)
 
 		if hashOnRead { // TODO: review: this is how it was done originally, is there a reason we can't just pass this directly?
 			bs.HashOnRead(true)

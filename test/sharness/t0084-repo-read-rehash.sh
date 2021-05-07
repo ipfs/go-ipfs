@@ -36,8 +36,9 @@ test_check_bad_blocks() {
   '
 
   test_expect_success "block shows up in repo verify" '
-    test_expect_code 1 ipfs repo verify > verify_out &&
-    grep "$H_BLOCK2" verify_out
+    test_expect_code 1 ipfs repo verify | cid-fmt --filter -b base32 "%M" > verify_out &&
+    H_BLOCK2_MH=`cid-fmt -b base32 "%M" $H_BLOCK2` &&
+    grep "$H_BLOCK2_MH" verify_out
   '
 }
 

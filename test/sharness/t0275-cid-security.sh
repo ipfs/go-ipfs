@@ -52,8 +52,8 @@ test_cat_get() {
 
 test_gc() {
   test_expect_success "injecting insecure block" '
-    mkdir -p "$IPFS_PATH/blocks/JZ" &&
-    cp -f ../t0275-cid-security-data/AFKSEBCGPUJZE.data "$IPFS_PATH/blocks/JZ"
+    mkdir -p "$IPFS_PATH/blocks/TS" &&
+    cp -f ../t0275-cid-security-data/EICEM7ITSI.data "$IPFS_PATH/blocks/TS"
   '
 
   test_expect_success "gc works" 'ipfs repo gc > gc_out'
