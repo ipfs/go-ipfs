@@ -3,6 +3,7 @@ module github.com/ipfs/go-ipfs
 require (
 	bazil.org/fuse v0.0.0-20200117225306-7b5117fecadc
 	contrib.go.opencensus.io/exporter/prometheus v0.3.0
+	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cheggaaa/pb v1.0.29
 	github.com/coreos/go-systemd/v22 v22.3.1
@@ -47,11 +48,11 @@ require (
 	github.com/ipfs/go-merkledag v0.3.2
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/ipfs/go-metrics-prometheus v0.0.2
-	github.com/ipfs/go-mfs v0.1.2
+	github.com/ipfs/go-mfs v0.1.3-0.20210507195338-96fbfa122164
 	github.com/ipfs/go-namesys v0.1.1
 	github.com/ipfs/go-path v0.0.9
 	github.com/ipfs/go-pinning-service-http-client v0.1.0
-	github.com/ipfs/go-unixfs v0.2.5
+	github.com/ipfs/go-unixfs v0.2.6
 	github.com/ipfs/go-verifcid v0.0.1
 	github.com/ipfs/interface-go-ipfs-core v0.4.0
 	github.com/ipld/go-car v0.2.2
