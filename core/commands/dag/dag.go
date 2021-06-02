@@ -3,8 +3,11 @@ package dagcmd
 import (
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	"github.com/ipld/go-ipld-prime"
+	"github.com/ipld/go-ipld-prime/multicodec"
 
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
@@ -40,6 +43,12 @@ to deprecate and replace the existing 'ipfs object' command moving forward.
 		"export":  DagExportCmd,
 		"stat":    DagStatCmd,
 	},
+}
+
+// GetDagCmd returns the finalized DagCmd for interacting with ipld dag objects.
+func GetDagCmd() *cmds.Command {
+	dagGetEncoderBuilder.Do(buildDagGetEncoders)
+	return DagCmd
 }
 
 // OutputObject is the output type of 'dag put' command
@@ -108,7 +117,21 @@ format.
 	Arguments: []cmds.Argument{
 		cmds.StringArg("ref", true, false, "The object to get").EnableStdin(),
 	},
-	Run: dagGet,
+	Run:      dagGet,
+	Encoders: cmds.EncoderMap{},
+}
+
+var dagGetEncoderBuilder sync.Once
+
+// buildDagGetEncoders enumerates available ipld-prime encoders for use in the
+// dag get command. it is performed lazily to run after plugins are loaded.
+func buildDagGetEncoders() {
+	enc, err := multicodec.LookupEncoder(0)
+	if err == nil {
+		DagGetCmd.Encoders["text"] = cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ipld.Node) error {
+			return enc(*out, w)
+		})
+	}
 }
 
 // DagResolveCmd returns address of highest block within a path and a path remainder

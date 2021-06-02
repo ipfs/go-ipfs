@@ -25,14 +25,17 @@ var localCommands = map[string]*cmds.Command{
 	"commands": commandsClientCmd,
 }
 
-func init() {
+func getRoot() *cmds.Command {
 	// setting here instead of in literal to prevent initialization loop
 	// (some commands make references to Root)
 	Root.Subcommands = localCommands
 
-	for k, v := range commands.Root.Subcommands {
+	commonCommands := commands.GetRoot()
+	for k, v := range commonCommands.Subcommands {
 		if _, found := Root.Subcommands[k]; !found {
 			Root.Subcommands[k] = v
 		}
 	}
+
+	return Root
 }

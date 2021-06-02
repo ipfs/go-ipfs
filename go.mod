@@ -31,7 +31,7 @@ require (
 	github.com/ipfs/go-graphsync v0.8.0
 	github.com/ipfs/go-ipfs-blockstore v0.1.4
 	github.com/ipfs/go-ipfs-chunker v0.0.5
-	github.com/ipfs/go-ipfs-cmds v0.6.0
+	github.com/ipfs/go-ipfs-cmds v0.6.1-0.20210430214744-45797f564bb1
 	github.com/ipfs/go-ipfs-config v0.12.0
 	github.com/ipfs/go-ipfs-ds-help v0.1.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
@@ -45,7 +45,7 @@ require (
 	github.com/ipfs/go-ipld-cbor v0.0.5
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/ipfs/go-ipld-git v0.0.4-0.20210326054912-6be33ddcbecc
-	github.com/ipfs/go-ipld-legacy v0.0.0-20210312014519-2895f54096d5
+	github.com/ipfs/go-ipld-legacy v0.0.0-20210325015318-9799f2cffab0
 	github.com/ipfs/go-ipns v0.0.2
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-merkledag v0.3.3-0.20210325015807-e952d22343f9
@@ -58,8 +58,8 @@ require (
 	github.com/ipfs/go-verifcid v0.0.1
 	github.com/ipfs/interface-go-ipfs-core v0.4.0
 	github.com/ipld/go-car v0.2.1-0.20210312021557-7afab98d034f
-	github.com/ipld/go-codec-dagpb v1.2.1-0.20210405170603-d0b86f7623c2 // indirect
-	github.com/ipld/go-ipld-prime v0.9.1-0.20210324083106-dc342a9917db
+	github.com/ipld/go-codec-dagpb v1.2.1-0.20210405170603-d0b86f7623c2
+	github.com/ipld/go-ipld-prime v0.9.1-0.20210428200757-949d1675afbc
 	github.com/jbenet/go-is-domain v1.0.5
 	github.com/jbenet/go-random v0.0.0-20190219211222-123a90aedc0c
 	github.com/jbenet/go-temp-err-catcher v0.1.0
@@ -94,7 +94,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/multiformats/go-multiaddr-dns v0.2.0
 	github.com/multiformats/go-multibase v0.0.3
-	github.com/multiformats/go-multicodec v0.2.1-0.20210319221629-f3663dccaeee
+	github.com/multiformats/go-multicodec v0.2.1-0.20210422093821-3704c0673b5b
 	github.com/multiformats/go-multihash v0.0.15
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1

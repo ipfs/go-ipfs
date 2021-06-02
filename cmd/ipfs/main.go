@@ -121,6 +121,13 @@ func mainRet() int {
 	// so we need to make sure it's stable
 	os.Args[0] = "ipfs"
 
+	var pluginLoader *loader.PluginLoader
+	if req, errParse := cli.Parse(ctx, os.Args[1:], nil, Root); errParse == nil {
+		if repoPath, err := getRepoPath(req); err == nil {
+			pluginLoader, err = loadPlugins(repoPath)
+		}
+	}
+
 	buildEnv := func(ctx context.Context, req *cmds.Request) (cmds.Environment, error) {
 		checkDebug(req)
 		repoPath, err := getRepoPath(req)
@@ -129,9 +136,12 @@ func mainRet() int {
 		}
 		log.Debugf("config path is %s", repoPath)
 
-		plugins, err := loadPlugins(repoPath)
-		if err != nil {
-			return nil, err
+		// If plugins failed to load before parsing stdin / args fully, defer that until now.
+		if pluginLoader == nil {
+			pluginLoader, err = loadPlugins(repoPath)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		// this sets up the function that will initialize the node
@@ -140,7 +150,7 @@ func mainRet() int {
 			ConfigRoot: repoPath,
 			LoadConfig: loadConfig,
 			ReqLog:     &oldcmds.ReqLog{},
-			Plugins:    plugins,
+			Plugins:    pluginLoader,
 			ConstructNode: func() (n *core.IpfsNode, err error) {
 				if req == nil {
 					return nil, errors.New("constructing node without a request")
@@ -165,7 +175,7 @@ func mainRet() int {
 		}, nil
 	}
 
-	err = cli.Run(ctx, Root, os.Args, os.Stdin, os.Stdout, os.Stderr, buildEnv, makeExecutor)
+	err = cli.Run(ctx, getRoot(), os.Args, os.Stdin, os.Stdout, os.Stderr, buildEnv, makeExecutor)
 	if err != nil {
 		return 1
 	}

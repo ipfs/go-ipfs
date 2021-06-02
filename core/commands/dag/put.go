@@ -9,8 +9,10 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
 	ipldlegacy "github.com/ipfs/go-ipld-legacy"
+	dagpb "github.com/ipld/go-codec-dagpb"
 	"github.com/ipld/go-ipld-prime/multicodec"
 	basicnode "github.com/ipld/go-ipld-prime/node/basic"
+	"github.com/ipld/go-ipld-prime/traversal"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
@@ -37,6 +39,7 @@ func dagPut(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) e
 	format, _ := req.Options["format"].(string)
 	hash, _ := req.Options["hash"].(string)
 	dopin, _ := req.Options["pin"].(bool)
+	wrappb, _ := req.Options["wrap-protobuf"].(bool)
 
 	// mhType tells inputParser which hash should be used. Default otherwise is sha256
 	mhType := uint64(mh.SHA2_256)
@@ -105,6 +108,49 @@ func dagPut(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) e
 		bd := bytes.NewBuffer([]byte{})
 		if err := encoder(n, bd); err != nil {
 			return err
+		}
+
+		if wrappb {
+			builder := dagpb.Type.PBNode.NewBuilder()
+			pbm, err := builder.BeginMap(2)
+			if err != nil {
+				return err
+			}
+			data, err := pbm.AssembleEntry("Data")
+			if err != nil {
+				return err
+			}
+			if err := data.AssignBytes(bd.Bytes()); err != nil {
+				return err
+			}
+			links, err := pbm.AssembleEntry("Links")
+			if err != nil {
+				return err
+			}
+			linkSlice, err := traversal.SelectLinks(n)
+			if err != nil {
+				return err
+			}
+			pbl, err := links.BeginList(int64(len(linkSlice)))
+			if err != nil {
+				return err
+			}
+			for _, l := range linkSlice {
+				if err := pbl.AssembleValue().AssignLink(l); err != nil {
+					return err
+				}
+			}
+			if err := pbl.Finish(); err != nil {
+				return err
+			}
+			if err := pbm.Finish(); err != nil {
+				return err
+			}
+			n = builder.Build()
+			bd = bytes.NewBuffer([]byte{})
+			if err := dagpb.Encode(n, bd); err != nil {
+				return err
+			}
 		}
 
 		blockCid, err := cidPrefix.Sum(bd.Bytes())

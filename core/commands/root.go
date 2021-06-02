@@ -220,6 +220,13 @@ func init() {
 	RootRO.Subcommands = rootROSubcommands
 }
 
+// GetRoot provides a late-bound mechanism for finalizing command line flags and arguments
+// after plugins have been loaded.
+func GetRoot() *cmds.Command {
+	Root.Subcommands["dag"] = dag.GetDagCmd()
+	return Root
+}
+
 type MessageOutput struct {
 	Message string
 }
