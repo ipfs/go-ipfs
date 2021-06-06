@@ -129,7 +129,7 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		BaseLibP2P,
 
 		fx.Provide(libp2p.AddrFilters(cfg.Swarm.AddrFilters)),
-		fx.Provide(libp2p.AddrsFactory(cfg.Addresses.Announce, cfg.Addresses.NoAnnounce)),
+		fx.Provide(libp2p.AddrsFactory(cfg.Addresses.Announce, cfg.Addresses.AppendAnnouce, cfg.Addresses.NoAnnounce)),
 		fx.Provide(libp2p.SmuxTransport(cfg.Swarm.Transports)),
 		fx.Provide(libp2p.Relay(enableRelay, cfg.Swarm.EnableRelayHop)),
 		fx.Provide(libp2p.Transports(cfg.Swarm.Transports)),
