@@ -44,9 +44,9 @@ const (
 )
 
 type pubsubMessage struct {
-	From     []byte   `json:"from,omitempty"`
-	Data     []byte   `json:"data,omitempty"`
-	Seqno    []byte   `json:"seqno,omitempty"`
+	From     string   `json:"from,omitempty"`
+	Data     string   `json:"data,omitempty"`
+	Seqno    string   `json:"seqno,omitempty"`
 	TopicIDs []string `json:"topicIDs,omitempty"`
 }
 
@@ -105,24 +105,36 @@ This command outputs data in the following encodings:
 				return err
 			}
 
-			if err := res.Emit(&pubsubMessage{
-				Data:     msg.Data(),
-				From:     []byte(msg.From()),
-				Seqno:    msg.Seq(),
-				TopicIDs: msg.Topics(),
-			}); err != nil {
+			encoder, _ := mbase.EncoderByName("base64")
+			psm := pubsubMessage{
+				Data:  encoder.Encode(msg.Data()),
+				From:  encoder.Encode([]byte(msg.From())),
+				Seqno: encoder.Encode(msg.Seq()),
+			}
+			for _, topic := range msg.Topics() {
+				psm.TopicIDs = append(psm.TopicIDs, encoder.Encode([]byte(topic)))
+			}
+			if err := res.Emit(&psm); err != nil {
 				return err
 			}
 		}
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, psm *pubsubMessage) error {
-			_, err := w.Write(psm.Data)
+			_, dec, err := mbase.Decode(psm.Data)
+			if err != nil {
+				return err
+			}
+			_, err = w.Write(dec)
 			return err
 		}),
 		"ndpayload": cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, psm *pubsubMessage) error {
-			psm.Data = append(psm.Data, '\n')
-			_, err := w.Write(psm.Data)
+			_, dec, err := mbase.Decode(psm.Data)
+			if err != nil {
+				return err
+			}
+			data := append(dec, '\n')
+			_, err = w.Write(data)
 			return err
 		}),
 		"lenpayload": cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, psm *pubsubMessage) error {
@@ -154,8 +166,6 @@ To use, the daemon must be run with '--enable-pubsub-experiment'.
 		cmds.StringArg("data", false, true, "Payload of message to publish."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
-		// encode all arguments
-
 		encoder, _ := mbase.EncoderByName("base64")
 		for n, arg := range req.Arguments {
 			req.Arguments[n] = encoder.Encode([]byte(arg))
