@@ -5,10 +5,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"sort"
 
 	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	mbase "github.com/multiformats/go-multibase"
+	"github.com/pkg/errors"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	options "github.com/ipfs/interface-go-ipfs-core/options"
@@ -147,7 +151,25 @@ To use, the daemon must be run with '--enable-pubsub-experiment'.
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("topic", true, false, "Topic to publish to."),
-		cmds.StringArg("data", true, true, "Payload of message to publish.").EnableStdin(),
+		cmds.StringArg("data", false, true, "Payload of message to publish."),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		// encode all arguments
+
+		encoder, _ := mbase.EncoderByName("base64")
+		for n, arg := range req.Arguments {
+			req.Arguments[n] = encoder.Encode([]byte(arg))
+		}
+
+		// when there are no string args, read from stdin.
+		if len(req.Arguments) == 1 {
+			buf, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				return err
+			}
+			req.Arguments = append(req.Arguments, encoder.Encode(buf))
+		}
+		return nil
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
@@ -155,15 +177,17 @@ To use, the daemon must be run with '--enable-pubsub-experiment'.
 			return err
 		}
 
-		topic := req.Arguments[0]
-
-		err = req.ParseBodyArgs()
+		_, topic, err := mbase.Decode(req.Arguments[0])
 		if err != nil {
-			return err
+			return errors.Wrap(err, "pubsub topic must be multibase encoded")
 		}
 
 		for _, data := range req.Arguments[1:] {
-			if err := api.PubSub().Publish(req.Context, topic, []byte(data)); err != nil {
+			_, datab, err := mbase.Decode(data)
+			if err != nil {
+				return errors.Wrap(err, "pubsub data must be multibase encoded")
+			}
+			if err := api.PubSub().Publish(req.Context, string(topic), datab); err != nil {
 				return err
 			}
 		}
