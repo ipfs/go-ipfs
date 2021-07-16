@@ -116,18 +116,16 @@ func (api *SwarmAPI) Peers(context.Context) ([]coreiface.ConnectionInfo, error) 
 
 	conns := api.peerHost.Network().Conns()
 
-	var out []coreiface.ConnectionInfo
+	out := make([]coreiface.ConnectionInfo, 0, len(conns))
 	for _, c := range conns {
-		pid := c.RemotePeer()
-		addr := c.RemoteMultiaddr()
 
 		ci := &connInfo{
 			peerstore: api.peerstore,
 			conn:      c,
 			dir:       c.Stat().Direction,
 
-			addr: addr,
-			peer: pid,
+			addr: c.RemoteMultiaddr(),
+			peer: c.RemotePeer(),
 		}
 
 		/*
