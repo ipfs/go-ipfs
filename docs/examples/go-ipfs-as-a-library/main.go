@@ -211,7 +211,7 @@ func main() {
 		fmt.Println("Spawning node on default repo")
 		ipfs, err := spawnDefault(ctx)
 		if err != nil {
-			fmt.Println("No IPFS repo available on the default path")
+			panic(fmt.Errorf("failed to spawnDefault node: %s", err))
 		}
 	*/
 
