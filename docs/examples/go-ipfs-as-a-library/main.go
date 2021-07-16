@@ -45,7 +45,7 @@ func setupPlugins(externalPluginsPath string) error {
 	return nil
 }
 
-func createTempRepo(ctx context.Context) (string, error) {
+func createTempRepo() (string, error) {
 	repoPath, err := ioutil.TempDir("", "ipfs-shell")
 	if err != nil {
 		return "", fmt.Errorf("failed to get temp dir: %s", err)
@@ -117,7 +117,7 @@ func spawnEphemeral(ctx context.Context) (icore.CoreAPI, error) {
 	}
 
 	// Create a Temporary Repo
-	repoPath, err := createTempRepo(ctx)
+	repoPath, err := createTempRepo()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp repo: %s", err)
 	}
