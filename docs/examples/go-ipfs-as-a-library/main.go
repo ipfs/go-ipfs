@@ -15,7 +15,6 @@ import (
 	libp2p "github.com/ipfs/go-ipfs/core/node/libp2p"
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	icorepath "github.com/ipfs/interface-go-ipfs-core/path"
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 
 	"github.com/ipfs/go-ipfs/core"
@@ -131,19 +130,19 @@ func spawnEphemeral(ctx context.Context) (icore.CoreAPI, error) {
 
 func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
 	var wg sync.WaitGroup
-	peerInfos := make(map[peer.ID]*peerstore.PeerInfo, len(peers))
+	peerInfos := make(map[peer.ID]*peer.AddrInfo, len(peers))
 	for _, addrStr := range peers {
 		addr, err := ma.NewMultiaddr(addrStr)
 		if err != nil {
 			return err
 		}
-		pii, err := peerstore.InfoFromP2pAddr(addr)
+		pii, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
 			return err
 		}
 		pi, ok := peerInfos[pii.ID]
 		if !ok {
-			pi = &peerstore.PeerInfo{ID: pii.ID}
+			pi = &peer.AddrInfo{ID: pii.ID}
 			peerInfos[pi.ID] = pi
 		}
 		pi.Addrs = append(pi.Addrs, pii.Addrs...)
@@ -151,7 +150,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 
 	wg.Add(len(peerInfos))
 	for _, peerInfo := range peerInfos {
-		go func(peerInfo *peerstore.PeerInfo) {
+		go func(peerInfo *peer.AddrInfo) {
 			defer wg.Done()
 			err := ipfs.Swarm().Connect(ctx, *peerInfo)
 			if err != nil {
