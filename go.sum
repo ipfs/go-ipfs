@@ -436,6 +436,12 @@ github.com/ipfs/go-ipfs-keystore v0.0.2 h1:Fa9xg9IFD1VbiZtrNLzsD0GuELVHUFXCWF64k
 github.com/ipfs/go-ipfs-keystore v0.0.2/go.mod h1:H49tRmibOEs7gLMgbOsjC4dqh1u5e0R/SWuc2ScfgSo=
 github.com/ipfs/go-ipfs-pinner v0.1.1 h1:iJd1gwILGQJSZhhI0jn6yFOLg34Ua7fdKcB6mXp6k/M=
 github.com/ipfs/go-ipfs-pinner v0.1.1/go.mod h1:EzyyaWCWeZJ/he9cDBH6QrEkSuRqTRWMmCoyNkylTTg=
+github.com/ipfs/go-ipfs-pinner v0.1.2-0.20210629193055-a24f5872bea1 h1:HBD8VHxUtnVHHfd8X6NJAU/zfItn4w2QJfVDPG8DjCs=
+github.com/ipfs/go-ipfs-pinner v0.1.2-0.20210629193055-a24f5872bea1/go.mod h1:/u9kMe+TyQybN21O5OBicdyx3x93lVI77PCtiTnArUk=
+github.com/ipfs/go-ipfs-pinner v0.1.2-0.20210702175237-0e5f06266254 h1:iDjWqbfzLsXSI6G5ww9zwU3PLIZUYOagkPS8Pi3ehI8=
+github.com/ipfs/go-ipfs-pinner v0.1.2-0.20210702175237-0e5f06266254/go.mod h1:/u9kMe+TyQybN21O5OBicdyx3x93lVI77PCtiTnArUk=
+github.com/ipfs/go-ipfs-pinner v0.1.2-0.20210713174036-35e85f6219bf h1:s/FXFgbF1aXWORgQHwhffmwsfvcJjUN+GTxuLzCjq2s=
+github.com/ipfs/go-ipfs-pinner v0.1.2-0.20210713174036-35e85f6219bf/go.mod h1:/u9kMe+TyQybN21O5OBicdyx3x93lVI77PCtiTnArUk=
 github.com/ipfs/go-ipfs-posinfo v0.0.1 h1:Esoxj+1JgSjX0+ylc0hUmJCOv6V2vFoZiETLR6OtpRs=
 github.com/ipfs/go-ipfs-posinfo v0.0.1/go.mod h1:SwyeVP+jCwiDu0C313l/8jg6ZxM0qqtlt2a0vILTc1A=
 github.com/ipfs/go-ipfs-pq v0.0.1/go.mod h1:LWIqQpqfRG3fNc5XsnIhz/wQ2XXGyugQwls7BgUmUfY=
