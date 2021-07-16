@@ -22,29 +22,31 @@ test_expect_success "make a few test files" '
 '
 
 test_expect_success "make an ipld object in json" '
-  printf "{\"hello\":\"world\",\"cats\":[{\"/\":\"%s\"},{\"water\":{\"/\":\"%s\"}}],\"magic\":{\"/\":\"%s\"},\"sub\":{\"dict\":\"ionary\",\"beep\":[0,\"bop\"]}}" $HASH1 $HASH2 $HASH3 > ipld_object
+  printf "{\"cats\":[{\"/\":\"%s\"},{\"water\":{\"/\":\"%s\"}}],\"hello\":\"world\",\"magic\":{\"/\":\"%s\"},\"subNode\":{\"beep\":[0,\"bop\"],\"dict\":\"ionary\"}}" $HASH1 $HASH2 $HASH3 > ipld_object
 '
 
-test_expect_success "make an ipld object in dag-json" '
-  echo "omREYXRhT6JkRGF0YWF4ZUxpbmtzgGVMaW5rc4A=" | base64 -d > ipld_object_pb
+test_expect_success "make the same ipld object in dag-cbor, dag-json and dag-pb" '
+  echo "omREYXRhT6JkRGF0YWF4ZUxpbmtzgGVMaW5rc4A=" | base64 -d > ipld_object_dagcbor
+  echo "Cg+iZERhdGFheGVMaW5rc4A=" | base64 -d > ipld_object_dagpb
+  echo "{\"Data\":{\"/\":{\"bytes\":\"omREYXRhYXhlTGlua3OA\"}},\"Links\":[]}" > ipld_object_dagjson
 '
-
 
 test_dag_cmd() {
-  test_expect_success "can add an ipld object using dag-json" '
+  test_expect_success "can add an ipld object using dag-json to dag-cbor" '
     IPLDHASH=$(cat ipld_object | ipfs dag put --input-enc=dag-json -f dag-cbor)
   '
 
-  test_expect_success "can add an ipld object using dag-json" '
-    IPLDPBHASH=$(cat ipld_object_pb | ipfs dag put --input-enc=dag-cbor -f dag-pb)
+  test_expect_success "CID looks correct" '
+    EXPHASH="bafyreihim5n3etxp5om74fdpriqtys5sdmgbd5ix2oil7u2g2qfdpdlgie"
+    test $EXPHASH = $IPLDHASH
   '
 
-  test_expect_success "can add an ipld object using dag-json" '
-    IPLDCBORHASH=$(cat ipld_object_pb | ipfs dag put --input-enc=dag-cbor -f dag-cbor)
+  test_expect_success "can add an ipld object using defaults" '
+    IPLDHASH=$(cat ipld_object | ipfs dag put)
   '
 
-  test_expect_success "output looks correct" '
-    EXPHASH="bafyreicktrf5jt6zu2npbojxx2onikqqdihoj2xutehmkmzrsw5bo5zgge"
+  test_expect_success "CID looks correct" '
+    EXPHASH="bafyreihim5n3etxp5om74fdpriqtys5sdmgbd5ix2oil7u2g2qfdpdlgie"
     test $EXPHASH = $IPLDHASH
   '
 
@@ -56,21 +58,39 @@ test_dag_cmd() {
     test $EXPHASH = $IPLDHASHb32
   '
 
-  test_expect_success "can add an ipld object" '
-    IPLDHASH=$(cat ipld_object | ipfs dag put)
-  '
-
-  test_expect_success "output looks correct" '
-    EXPHASH="bafyreicktrf5jt6zu2npbojxx2onikqqdihoj2xutehmkmzrsw5bo5zgge"
-    test $EXPHASH = $IPLDHASH
-  '
-
   test_expect_success "can add an ipld object using --cid-base=base32" '
     IPLDHASHb32=$(cat ipld_object | ipfs dag put --cid-base=base32)
   '
 
   test_expect_success "output looks correct" '
     test $(ipfs cid base32 $EXPHASH) = $IPLDHASHb32
+  '
+
+  test_expect_success "can add an ipld object using dag-cbor to dag-pb" '
+    IPLDPBHASH=$(cat ipld_object_dagcbor | ipfs dag put --input-enc=dag-cbor -f dag-pb)
+  '
+
+  test_expect_success "dag-pb CID looks correct" '
+    EXPHASH="bafybeicbvnvha5b25w77plipz3v5axqydbhxb2s2ojglexotowwieoecvy"
+    test $EXPHASH = $IPLDPBHASH
+  '
+
+  test_expect_success "can add an ipld object using dag-cbor to dag-cbor" '
+    IPLDCBORHASH=$(cat ipld_object_dagcbor | ipfs dag put --input-enc=dag-cbor -f dag-cbor)
+  '
+
+  test_expect_success "dag-cbor CID looks correct" '
+    EXPHASH="bafyreibuwyi6b7oruz64krsakf5a4zmttu6dqksu6bpkpy3sjrm6a73o6a"
+    test $EXPHASH = $IPLDCBORHASH
+  '
+
+  test_expect_success "can add an ipld object using dag-cbor to dag-json" '
+    IPLDJSONHASH=$(cat ipld_object_dagcbor | ipfs dag put --input-enc=dag-cbor -f dag-json)
+  '
+
+  test_expect_success "dag-cbor CID looks correct" '
+    EXPHASH="baguqeerarvo2dwtckziergct46ijehc4yc7o3y7rwsiomwf65frbhqtgc4ta"
+    test $EXPHASH = $IPLDJSONHASH
   '
 
   test_expect_success "various path traversals work" '
@@ -87,31 +107,39 @@ test_dag_cmd() {
 
   test_expect_success "resolving sub-objects works" '
     ipfs dag get $IPLDHASH/hello > sub1 &&
-    ipfs dag get $IPLDHASH/sub > sub2 &&
-    ipfs dag get $IPLDHASH/sub/beep > sub3 &&
-    ipfs dag get $IPLDHASH/sub/beep/0 > sub4 &&
-    ipfs dag get $IPLDHASH/sub/beep/1 > sub5
+    ipfs dag get $IPLDHASH/subNode > sub2 &&
+    ipfs dag get $IPLDHASH/subNode/beep > sub3 &&
+    ipfs dag get $IPLDHASH/subNode/beep/0 > sub4 &&
+    ipfs dag get $IPLDHASH/subNode/beep/1 > sub5
   '
 
   test_expect_success "sub-objects look right" '
-    echo "\"world\"" > sub1_exp &&
+    echo -n "\"world\"" > sub1_exp &&
     test_cmp sub1_exp sub1 &&
-    echo "{\"beep\":[0,\"bop\"],\"dict\":\"ionary\"}" > sub2_exp &&
+    echo -n "{\"beep\":[0,\"bop\"],\"dict\":\"ionary\"}" > sub2_exp &&
     test_cmp sub2_exp sub2 &&
-    echo "[0,\"bop\"]" > sub3_exp &&
+    echo -n "[0,\"bop\"]" > sub3_exp &&
     test_cmp sub3_exp sub3 &&
-    echo "0" > sub4_exp &&
+    echo -n "0" > sub4_exp &&
     test_cmp sub4_exp sub4 &&
-    echo "\"bop\"" > sub5_exp &&
+    echo -n "\"bop\"" > sub5_exp &&
     test_cmp sub5_exp sub5
   '
 
-  test_expect_success "can pin cbor object" '
-    ipfs pin add $EXPHASH
+  test_expect_success "can pin ipld object" '
+    ipfs pin add $IPLDHASH
   '
 
-  test_expect_success "can pin dag object" '
+  test_expect_success "can pin dag-pb object" '
     ipfs pin add $IPLDPBHASH
+  '
+
+  test_expect_success "can pin dag-cbor object" '
+    ipfs pin add $IPLDCBORHASH
+  '
+
+  test_expect_success "can pin dag-json object" '
+    ipfs pin add $IPLDJSONHASH
   '
 
   test_expect_success "after gc, objects still accessible" '
@@ -120,7 +148,7 @@ test_dag_cmd() {
   '
 
   test_expect_success "can get object" '
-    ipfs dag get $IPLDPBHASH > ipld_obj_out
+    ipfs dag get $IPLDHASH > ipld_obj_out
   '
 
   test_expect_success "object links look right" '
@@ -129,7 +157,7 @@ test_dag_cmd() {
 
   test_expect_success "retrieved object hashes back correctly" '
     IPLDHASH2=$(cat ipld_obj_out | ipfs dag put --input-enc=dag-json -f dag-cbor) &&
-    test "$IPLDCBORHASH" = "$IPLDHASH2"
+    test "$IPLDHASH" = "$IPLDHASH2"
   '
 
   test_expect_success "add a normal file" '
@@ -141,7 +169,7 @@ test_dag_cmd() {
   '
 
   test_expect_success "output looks correct" '
-    echo "{\"data\":\"CAISB2Zvb2JhcgoYBw==\",\"links\":[]}" > dag_get_pb_exp &&
+    echo -n "{\"Data\":{\"/\":{\"bytes\":\"CAISB2Zvb2JhcgoYBw==\"}},\"Links\":[]}" > dag_get_pb_exp &&
     test_cmp dag_get_pb_exp dag_get_pb_out
   '
 
@@ -150,7 +178,7 @@ test_dag_cmd() {
   '
 
   test_expect_success "output looks correct" '
-    echo "{\"data\":\"CAISBGZvbwoYBA==\",\"links\":[]}" > cat_exp &&
+    echo -n "{\"Data\":{\"/\":{\"bytes\":\"CAISBGZvbwoYBA==\"}},\"Links\":[]}" > cat_exp &&
     test_cmp cat_exp cat_out
   '
 
@@ -179,13 +207,13 @@ test_dag_cmd() {
   '
 
   test_expect_success "output looks correct" '
-    EXPHASH="bafyriqf6pe376nnoh4ngsxmo7inplk35k5ucdfwvbc547vhp5mxx6wknllub3nyk44pvp37kgzrp2cotebl2onrqg5i7an4rcuu66cnj4ij4i"
+    EXPHASH="bafyriqdoys7rmgfkjg7jjdjdhaajt66vxjusd2ry6eims63xy5wwjtjgditq4z4f76tmnal5rccb4zg3o4zcud3utxulm7svoapq2du3xmnok"
     test $EXPHASH = $IPLDHASH
   '
 
   test_expect_success "prepare dag-pb object" '
     echo foo > test_file &&
-    HASH=$(ipfs add -wq test_file | tail -n1)
+    HASH=$(ipfs add -wq test_file | tail -n1 | ipfs cid base32)
   '
 
   test_expect_success "dag put with json dag-pb works" '
@@ -200,7 +228,7 @@ test_dag_cmd() {
 
   test_expect_success "dag put with raw dag-pb works" '
     ipfs block get $HASH > pbraw &&
-    cat pbraw | ipfs dag put --format=dag-pb --input-enc=raw > dag_put_out
+    cat pbraw | ipfs dag put --format=dag-pb --input-enc=dag-pb > dag_put_out
   '
 
   test_expect_success "dag put with dag-pb works output looks good" '
@@ -287,10 +315,10 @@ test_dag_cmd() {
 
   test_expect_success "dag stat of simple IPLD object" '
     ipfs dag stat $NESTED_HASH > actual_stat_inner_ipld_obj &&
-    echo "Size: 15, NumBlocks: 1" > exp_stat_inner_ipld_obj &&
+    echo "Size: 8, NumBlocks: 1" > exp_stat_inner_ipld_obj &&
     test_cmp exp_stat_inner_ipld_obj actual_stat_inner_ipld_obj &&
     ipfs dag stat $HASH > actual_stat_ipld_obj &&
-    echo "Size: 61, NumBlocks: 2" > exp_stat_ipld_obj &&
+    echo "Size: 54, NumBlocks: 2" > exp_stat_ipld_obj &&
     test_cmp exp_stat_ipld_obj actual_stat_ipld_obj
   '
 
