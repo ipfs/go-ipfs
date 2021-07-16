@@ -25,7 +25,7 @@ func AddrFilters(filters []string) func() (*ma.Filters, Libp2pOpts, error) {
 	}
 }
 
-func makeAddrsFactory(announce []string, noAnnounce []string) (p2pbhost.AddrsFactory, error) {
+func makeAddrsFactory(announce []string, appendAnnouce bool, noAnnounce []string) (p2pbhost.AddrsFactory, error) {
 	var annAddrs []ma.Multiaddr
 	for _, addr := range announce {
 		maddr, err := ma.NewMultiaddr(addr)
@@ -52,9 +52,12 @@ func makeAddrsFactory(announce []string, noAnnounce []string) (p2pbhost.AddrsFac
 
 	return func(allAddrs []ma.Multiaddr) []ma.Multiaddr {
 		var addrs []ma.Multiaddr
-		if len(annAddrs) > 0 {
+		switch {
+		case appendAnnouce:
+			addrs = append(allAddrs, annAddrs...)
+		case len(annAddrs) > 0:
 			addrs = annAddrs
-		} else {
+		default:
 			addrs = allAddrs
 		}
 
@@ -71,9 +74,9 @@ func makeAddrsFactory(announce []string, noAnnounce []string) (p2pbhost.AddrsFac
 	}, nil
 }
 
-func AddrsFactory(announce []string, noAnnounce []string) func() (opts Libp2pOpts, err error) {
+func AddrsFactory(announce []string, appendAnnouce bool, noAnnounce []string) func() (opts Libp2pOpts, err error) {
 	return func() (opts Libp2pOpts, err error) {
-		addrsFactory, err := makeAddrsFactory(announce, noAnnounce)
+		addrsFactory, err := makeAddrsFactory(announce, appendAnnouce, noAnnounce)
 		if err != nil {
 			return opts, err
 		}

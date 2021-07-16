@@ -136,6 +136,7 @@ does (e.g, `"1d2h4m40.01s"`).
     - [`Addresses.Gateway`](#addressesgateway)
     - [`Addresses.Swarm`](#addressesswarm)
     - [`Addresses.Announce`](#addressesannounce)
+    - [`Addresses.AppendAnnounce`](#addressesappendannounce)
     - [`Addresses.NoAnnounce`](#addressesnoannounce)
 - [`API`](#api)
     - [`API.HTTPHeaders`](#apihttpheaders)
@@ -287,6 +288,15 @@ network. If empty, the daemon will announce inferred swarm addresses.
 Default: `[]`
 
 Type: `array[string]` (multiaddrs)
+
+### `Addresses.AppendAnnounce`
+
+If true, the daemon will announce both [`Addresses.Announce`](#addressesannounce)
+and inferred swarm addresses to the network.
+
+Default: `false`
+
+Type: `bool`
 
 ### `Addresses.NoAnnounce`
 An array of swarm addresses not to announce to the network.
@@ -719,17 +729,17 @@ Below is a list of the most common public gateway setups.
      }'
    ```
    - **Backward-compatible:** this feature enables automatic redirects from content paths to subdomains:
-   
+
      `http://dweb.link/ipfs/{cid}` → `http://{cid}.ipfs.dweb.link`
-     
+
    - **X-Forwarded-Proto:** if you run go-ipfs behind a reverse proxy that provides TLS, make it add a `X-Forwarded-Proto: https` HTTP header to ensure users are redirected to `https://`, not `http://`. It will also ensure DNSLink names are inlined to fit in a single DNS label, so they work fine with a wildcart TLS cert ([details](https://github.com/ipfs/in-web-browsers/issues/169)). The NGINX directive is `proxy_set_header X-Forwarded-Proto "https";`.:
-  
+
      `http://dweb.link/ipfs/{cid}` → `https://{cid}.ipfs.dweb.link`
-     
+
      `http://dweb.link/ipns/your-dnslink.site.example.com` → `https://your--dnslink-site-example-com.ipfs.dweb.link`
-     
+
    - **X-Forwarded-Host:** we also support `X-Forwarded-Host: example.com` if you want to override subdomain gateway host from the original request:
-   
+
      `http://dweb.link/ipfs/{cid}` → `http://{cid}.ipfs.example.com`
 
 
@@ -754,7 +764,7 @@ Below is a list of the most common public gateway setups.
   Disable fetching of remote data (`NoFetch: true`) and resolving DNSLink at unknown hostnames (`NoDNSLink: true`).
   Then, enable DNSLink gateway only for the specific hostname (for which data
   is already present on the node), without exposing any content-addressing `Paths`:
-  
+
    ```console
    $ ipfs config --json Gateway.NoFetch true
    $ ipfs config --json Gateway.NoDNSLink true
