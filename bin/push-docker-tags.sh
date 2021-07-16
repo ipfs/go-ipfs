@@ -67,10 +67,6 @@ elif [[ $GIT_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   pushTag "latest"
   pushTag "release" # see: https://github.com/ipfs/go-ipfs/issues/3999#issuecomment-742228981
 
-elif [ "$GIT_BRANCH" = "feat/stabilize-dht" ]; then
-  pushTag "bifrost-${BUILD_NUM}-${GIT_SHA1_SHORT}"
-  pushTag "bifrost-latest"
-
 elif [ "$GIT_BRANCH" = "master" ]; then
   pushTag "master-${BUILD_NUM}-${GIT_SHA1_SHORT}"
   pushTag "master-latest"

@@ -331,6 +331,23 @@ jobs:
           root: .
           paths:
             - ./go-ipfs-image.tar
+  docker-build-extras:
+    executor: dockerizer
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: "19.03.13"
+      - run:
+          name: Build Docker Extras image
+          command: |
+            docker build --build-arg IPFS_PLUGINS="peerlog" -t "$IMAGE_NAME-extras:$WIP_IMAGE_TAG" .
+      - run:
+          name: Archive Docker Extras image
+          command: docker save -o go-ipfs-extras-image.tar $IMAGE_NAME
+      - persist_to_workspace:
+          root: .
+          paths:
+            - ./go-ipfs-extras-image.tar
   docker-push:
     executor: dockerizer
     steps:
@@ -347,6 +364,22 @@ jobs:
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             ./bin/push-docker-tags.sh $(date -u +%F) "$CIRCLE_SHA1" "$CIRCLE_BRANCH" "$CIRCLE_TAG"
+  docker-push-extras:
+    executor: dockerizer
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: "19.03.13"
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Load archived Docker Extras image
+          command: docker load -i /tmp/workspace/go-ipfs-extras-image.tar
+      - run:
+          name: Publish Docker Extras Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            ./bin/push-docker-tags.sh $(date -u +%F) "$CIRCLE_SHA1" "$CIRCLE_BRANCH" "extras"
 
 workflows:
   version: 2
