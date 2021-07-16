@@ -1,0 +1,8 @@
+version: "3"
+services:
+ localstack:
+    image: localstack/localstack
+    environment:
+      - SERVICES=s3
+    ports:
+      - 4566:4566

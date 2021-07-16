@@ -1,0 +1,22 @@
+version: 2.1
+
+orbs:
+  ci-go: ipfs/ci-go@0.3.1
+
+executors:
+  go-s3:
+    docker:
+      - image: cimg/go:1.15.8
+      - image: localstack/localstack
+    environment:
+      LOCAL_S3: 1
+      SERVICES: s3
+
+workflows:
+  version: 2
+  test:
+    jobs:
+    - ci-go/build
+    - ci-go/lint
+    - ci-go/test:
+        executor: go-s3
