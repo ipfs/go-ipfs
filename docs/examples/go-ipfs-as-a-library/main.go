@@ -312,7 +312,12 @@ func main() {
 		// "/ip4/127.0.0.1/udp/4010/quic/p2p/QmZp2fhDLxjYue2RiUvLwT9MWdnbDxam32qYFnGmxZDh5L",
 	}
 
-	go connectToPeers(ctx, ipfs, bootstrapNodes)
+	go func() {
+		err := connectToPeers(ctx, ipfs, bootstrapNodes)
+		if err != nil {
+			log.Printf("failed connect to peers: %s", err)
+		}
+	}()
 
 	exampleCIDStr := "QmUaoioqU7bxezBQZkUcgcSyokatMY71sxsALxQmRRrHrj"
 
