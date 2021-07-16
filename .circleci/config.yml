@@ -62,6 +62,9 @@ executors:
     environment:
       IMAGE_NAME: ipfs/go-ipfs
       WIP_IMAGE_TAG: wip
+      DOCKER_CLI_EXPERIMENTAL: enabled
+      DOCKER_BUILDKIT: 1
+      BUILDX_PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
 
 jobs:
   gobuild:
@@ -320,10 +323,33 @@ jobs:
       - checkout
       - setup_remote_docker:
           version: "19.03.13"
+      - run: sudo apt update -y
+      - run: sudo apt install -y make curl qemu-user-static qemu-user binfmt-support
+      - run:
+          name: Install buildx
+          command: |
+            BUILDX_BINARY_URL="https://github.com/docker/buildx/releases/download/v0.4.2/buildx-v0.4.2.linux-amd64"
+
+            curl --output docker-buildx \
+              --silent --show-error --location --fail --retry 3 \
+              "$BUILDX_BINARY_URL"
+
+            mkdir -vp ~/.docker/cli-plugins
+
+            mv docker-buildx ~/.docker/cli-plugins/
+            chmod a+x ~/.docker/cli-plugins/docker-buildx
+
+            docker buildx install
+            # Run binfmt
+            docker run --rm --privileged tonistiigi/binfmt:latest --install "$BUILDX_PLATFORMS"
+
+      - run: docker buildx create --use --name mybuilder
       - run:
           name: Build Docker image
           command: |
-            docker build -t $IMAGE_NAME:$WIP_IMAGE_TAG .
+            docker buildx build \
+              --platform "$BUILDX_PLATFORMS" \
+              -t $IMAGE_NAME:$WIP_IMAGE_TAG .
       - run:
           name: Archive Docker image
           command: docker save -o go-ipfs-image.tar $IMAGE_NAME

@@ -46,16 +46,22 @@ DRY_RUN=${5:-false}
 WIP_IMAGE_TAG=${WIP_IMAGE_TAG:-wip}
 IMAGE_NAME=${IMAGE_NAME:-ipfs/go-ipfs}
 
+ARCHS=${BUILDX_PLATFORMS:-"linux/arm/v7,linux/arm64/v8,linux/amd64"}
+
 pushTag () {
   local IMAGE_TAG=$1
   if [ "$DRY_RUN" != false ]; then
     echo "DRY RUN! I would have tagged and pushed the following..."
     echo docker tag "$IMAGE_NAME:$WIP_IMAGE_TAG" "$IMAGE_NAME:$IMAGE_TAG"
-    echo docker push "$IMAGE_NAME:$IMAGE_TAG"
+    echo "docker buildx build --push \
+      --platform "$ARCHS" \
+      --tag '$IMAGE_NAME:$IMAGE_TAG'"
   else
     echo "Tagging $IMAGE_NAME:$IMAGE_TAG and pushing to dockerhub"
     docker tag "$IMAGE_NAME:$WIP_IMAGE_TAG" "$IMAGE_NAME:$IMAGE_TAG"
-    docker push "$IMAGE_NAME:$IMAGE_TAG"
+    docker buildx build --push \
+          --platform "$ARCHS" \
+          --tag "$IMAGE_NAME:$IMAGE_TAG" .
   fi
 }
 
