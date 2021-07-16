@@ -43,7 +43,10 @@ DATA STRUCTURE COMMANDS
   dag           Interact with IPLD DAG nodes
   files         Interact with files as if they were a unix filesystem
   block         Interact with raw blocks in the datastore
+
+TEXT ENCODING COMMANDS
   cid           Convert and discover properties of CIDs
+  multibase     Encode and decode data with Multibase format
 
 ADVANCED COMMANDS
   daemon        Start a long-running daemon process
@@ -151,6 +154,7 @@ var rootSubcommands = map[string]*cmds.Command{
 	"version":   VersionCmd,
 	"shutdown":  daemonShutdownCmd,
 	"cid":       CidCmd,
+	"multibase": MbaseCmd,
 }
 
 // RootRO is the readonly version of Root
