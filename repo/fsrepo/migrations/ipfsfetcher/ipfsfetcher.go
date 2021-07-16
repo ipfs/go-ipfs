@@ -2,6 +2,7 @@ package ipfsfetcher
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,10 +33,9 @@ const (
 )
 
 type IpfsFetcher struct {
-	distPath  string
-	limit     int64
-	bootstrap []string
-	peers     []peer.AddrInfo
+	distPath string
+	limit    int64
+	repoRoot *string
 
 	openOnce  sync.Once
 	openErr   error
@@ -56,12 +56,15 @@ type IpfsFetcher struct {
 //
 // Specifying "" for distPath sets the default IPNS path.
 // Specifying 0 for fetchLimit sets the default, -1 means no limit.
-func NewIpfsFetcher(distPath string, fetchLimit int64, bootstrap []string, peers []peer.AddrInfo) *IpfsFetcher {
+//
+// Bootstrap and peer information in read from the IPFS config file in
+// repoRoot, unless repoRoot is nil.  If repoRoot is empty (""), then read the
+// config from the default IPFS directory.
+func NewIpfsFetcher(distPath string, fetchLimit int64, repoRoot *string) *IpfsFetcher {
 	f := &IpfsFetcher{
-		limit:     defaultFetchLimit,
-		distPath:  migrations.LatestIpfsDist,
-		bootstrap: bootstrap,
-		peers:     peers,
+		limit:    defaultFetchLimit,
+		distPath: migrations.LatestIpfsDist,
+		repoRoot: repoRoot,
 	}
 
 	if distPath != "" {
@@ -88,7 +91,8 @@ func (f *IpfsFetcher) Fetch(ctx context.Context, filePath string) (io.ReadCloser
 	// Initialize and start IPFS node on first call to Fetch, since the fetcher
 	// may be created by not used.
 	f.openOnce.Do(func() {
-		f.ipfsTmpDir, f.openErr = initTempNode(ctx, f.bootstrap, f.peers)
+		bootstrap, peers := readIpfsConfig(f.repoRoot)
+		f.ipfsTmpDir, f.openErr = initTempNode(ctx, bootstrap, peers)
 		if f.openErr != nil {
 			return
 		}
@@ -276,4 +280,51 @@ func parsePath(fetchPath string) (ipath.Path, error) {
 		return nil, fmt.Errorf("%q is not an IPFS path", fetchPath)
 	}
 	return ipfsPath, ipfsPath.IsValid()
+}
+
+func readIpfsConfig(repoRoot *string) (bootstrap []string, peers []peer.AddrInfo) {
+	if repoRoot == nil {
+		return
+	}
+
+	cfgPath, err := config.Filename(*repoRoot)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	cfgFile, err := os.Open(cfgPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+	defer cfgFile.Close()
+
+	// Attempt to read bootstrap addresses
+	var bootstrapCfg struct {
+		Bootstrap []string
+	}
+	err = json.NewDecoder(cfgFile).Decode(&bootstrapCfg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot read bootstrap peers from config")
+	} else {
+		bootstrap = bootstrapCfg.Bootstrap
+	}
+
+	if _, err = cfgFile.Seek(0, 0); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	// Attempt to read peers
+	var peeringCfg struct {
+		Peering config.Peering
+	}
+	err = json.NewDecoder(cfgFile).Decode(&peeringCfg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot read peering from config")
+	} else {
+		peers = peeringCfg.Peering.Peers
+	}
+
+	return
 }

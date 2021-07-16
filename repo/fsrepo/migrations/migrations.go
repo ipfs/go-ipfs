@@ -2,15 +2,20 @@ package migrations
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
 	"strings"
 	"sync"
+
+	config "github.com/ipfs/go-ipfs-config"
 )
 
 const (
@@ -105,6 +110,89 @@ func ExeName(name string) string {
 		return name + ".exe"
 	}
 	return name
+}
+
+// ReadMigrationConfig reads the Migration section of the IPFS config, avoiding
+// reading anything other than the Migration section. That way, we're free to
+// make arbitrary changes to all _other_ sections in migrations.
+func ReadMigrationConfig(repoRoot string) (*config.Migration, error) {
+	var cfg struct {
+		Migration config.Migration
+	}
+
+	cfgPath, err := config.Filename(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	cfgFile, err := os.Open(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+	defer cfgFile.Close()
+
+	err = json.NewDecoder(cfgFile).Decode(&cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	switch cfg.Migration.Keep {
+	case "":
+		cfg.Migration.Keep = config.DefaultMigrationKeep
+	case "discard", "cache", "keep":
+	default:
+		return nil, errors.New("unknown config value, Migrations.Keep must be 'cache', 'pin', or 'discard'")
+	}
+
+	if len(cfg.Migration.DownloadSources) == 0 {
+		cfg.Migration.DownloadSources = config.DefaultMigrationDownloadSources
+	}
+
+	return &cfg.Migration, nil
+}
+
+// GetMigrationFetcher creates one or more fetchers according to
+// downloadSources,
+func GetMigrationFetcher(downloadSources []string, distPath string, newIpfsFetcher func(string) Fetcher) (Fetcher, error) {
+	const httpUserAgent = "go-ipfs"
+
+	var fetchers []Fetcher
+	for _, src := range downloadSources {
+		src := strings.TrimSpace(src)
+		switch src {
+		case "HTTPS", "https", "HTTP", "http":
+			fetchers = append(fetchers, NewHttpFetcher(distPath, "", httpUserAgent, 0))
+		case "IPFS", "ipfs":
+			if newIpfsFetcher != nil {
+				fetchers = append(fetchers, newIpfsFetcher(distPath))
+			}
+		default:
+			u, err := url.Parse(src)
+			if err != nil {
+				return nil, fmt.Errorf("bad gateway address: %s", err)
+			}
+			switch u.Scheme {
+			case "":
+				u.Scheme = "https"
+			case "https", "http":
+			default:
+				return nil, errors.New("bad gateway address: url scheme must be http or https")
+			}
+			fetchers = append(fetchers, NewHttpFetcher(distPath, u.String(), httpUserAgent, 0))
+		case "":
+			// Ignore empty string
+		}
+	}
+	if len(fetchers) == 0 {
+		return nil, errors.New("no sources specified")
+	}
+
+	if len(fetchers) == 1 {
+		return fetchers[0], nil
+	}
+
+	// Wrap fetchers in a MultiFetcher to try them in order
+	return NewMultiFetcher(fetchers...), nil
 }
 
 func migrationName(from, to int) string {

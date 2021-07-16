@@ -2,17 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
-	config "github.com/ipfs/go-ipfs-config"
 	"github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
@@ -24,140 +20,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-// readMigrationConfig reads the migration config out of the config, avoiding
-// reading anything other than the migration section. That way, we're free to
-// make arbitrary changes to all _other_ sections in migrations.
-func readMigrationConfig(repoRoot string) (*config.Migration, error) {
-	var cfg struct {
-		Migration config.Migration
-	}
-
-	cfgPath, err := config.Filename(repoRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	cfgFile, err := os.Open(cfgPath)
-	if err != nil {
-		return nil, err
-	}
-	defer cfgFile.Close()
-
-	err = json.NewDecoder(cfgFile).Decode(&cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	switch cfg.Migration.Keep {
-	case "":
-		cfg.Migration.Keep = config.DefaultMigrationKeep
-	case "discard", "cache", "keep":
-	default:
-		return nil, errors.New("unknown config value, Migrations.Keep must be 'cache', 'pin', or 'discard'")
-	}
-
-	if len(cfg.Migration.DownloadSources) == 0 {
-		cfg.Migration.DownloadSources = config.DefaultMigrationDownloadSources
-	}
-
-	return &cfg.Migration, nil
-}
-
-func readIpfsConfig(repoRoot *string) (bootstrap []string, peers []peer.AddrInfo) {
-	if repoRoot == nil {
-		return
-	}
-
-	cfgPath, err := config.Filename(*repoRoot)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return
-	}
-
-	cfgFile, err := os.Open(cfgPath)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return
-	}
-	defer cfgFile.Close()
-
-	// Attempt to read bootstrap addresses
-	var bootstrapCfg struct {
-		Bootstrap []string
-	}
-	err = json.NewDecoder(cfgFile).Decode(&bootstrapCfg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "cannot read bootstrap peers from config")
-	} else {
-		bootstrap = bootstrapCfg.Bootstrap
-	}
-
-	if _, err = cfgFile.Seek(0, 0); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-	}
-
-	// Attempt to read peers
-	var peeringCfg struct {
-		Peering config.Peering
-	}
-	err = json.NewDecoder(cfgFile).Decode(&peeringCfg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "cannot read peering from config")
-	} else {
-		peers = peeringCfg.Peering.Peers
-	}
-
-	return
-}
-
-// getMigrationFetcher creates one or more fetchers according to
-// config.Migration.DownloadSources.  If an IpfsFetcher is required, then
-// bootstrap and peer information in read from the config file in repoRoot,
-// unless repoRoot is nil.
-func getMigrationFetcher(cfg *config.Migration, repoRoot *string) (migrations.Fetcher, error) {
-	const httpUserAgent = "go-ipfs"
-
-	// Fetch migrations from current distribution, or location from environ
-	fetchDistPath := migrations.GetDistPathEnv(migrations.CurrentIpfsDist)
-
-	var fetchers []migrations.Fetcher
-	for _, src := range cfg.DownloadSources {
-		src := strings.TrimSpace(src)
-		switch src {
-		case "IPFS", "ipfs":
-			bootstrap, peers := readIpfsConfig(repoRoot)
-			fetchers = append(fetchers, ipfsfetcher.NewIpfsFetcher(fetchDistPath, 0, bootstrap, peers))
-		case "HTTPS", "https", "HTTP", "http":
-			fetchers = append(fetchers, migrations.NewHttpFetcher(fetchDistPath, "", httpUserAgent, 0))
-		default:
-			u, err := url.Parse(src)
-			if err != nil {
-				return nil, fmt.Errorf("bad gateway address: %s", err)
-			}
-			switch u.Scheme {
-			case "":
-				u.Scheme = "https"
-			case "https", "http":
-			default:
-				return nil, errors.New("bad gateway address: url scheme must be http or https")
-			}
-			fetchers = append(fetchers, migrations.NewHttpFetcher(fetchDistPath, u.String(), httpUserAgent, 0))
-		case "":
-			// Ignore empty string
-		}
-	}
-	if len(fetchers) == 0 {
-		return nil, errors.New("no sources specified")
-	}
-
-	if len(fetchers) == 1 {
-		return fetchers[0], nil
-	}
-
-	// Wrap fetchers in a MultiFetcher to try them in order
-	return migrations.NewMultiFetcher(fetchers...), nil
-}
-
+// addMigrations adds any migration downloaded by the fetcher to the IPFS node
 func addMigrations(ctx context.Context, node *core.IpfsNode, fetcher migrations.Fetcher, pin bool) error {
 	var fetchers []migrations.Fetcher
 	if mf, ok := fetcher.(*migrations.MultiFetcher); ok {

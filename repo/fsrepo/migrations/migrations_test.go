@@ -3,12 +3,15 @@ package migrations
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	config "github.com/ipfs/go-ipfs-config"
 )
 
 func TestFindMigrations(t *testing.T) {
@@ -210,4 +213,213 @@ func createFakeBin(from, to int, tmpDir string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+var testConfig = `
+{
+	"Bootstrap": [
+		"/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+		"/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
+	],
+	"Migration": {
+		"DownloadSources": ["IPFS", "HTTP", "127.0.0.1", "https://127.0.1.1"],
+		"Keep": "cache"
+	},
+	"Peering": {
+		"Peers": [
+			{
+				"ID": "12D3KooWGC6TvWhfapngX6wvJHMYvKpDMXPb3ZnCZ6dMoaMtimQ5",
+				"Addrs": ["/ip4/127.0.0.1/tcp/4001", "/ip4/127.0.0.1/udp/4001/quic"]
+			}
+		]
+	}
+}
+`
+
+func TestReadMigrationConfigDefaults(t *testing.T) {
+	tmpDir := makeConfig("{}")
+	defer os.RemoveAll(tmpDir)
+
+	cfg, err := ReadMigrationConfig(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.Keep != config.DefaultMigrationKeep {
+		t.Error("expected default value for Keep")
+	}
+
+	if len(cfg.DownloadSources) != len(config.DefaultMigrationDownloadSources) {
+		t.Fatal("expected default number of download sources")
+	}
+	for i, src := range config.DefaultMigrationDownloadSources {
+		if cfg.DownloadSources[i] != src {
+			t.Errorf("wrong DownloadSource: %s", cfg.DownloadSources[i])
+		}
+	}
+}
+
+func TestReadMigrationConfigErrors(t *testing.T) {
+	tmpDir := makeConfig(`{"Migration": {"Keep": "badvalue"}}`)
+	defer os.RemoveAll(tmpDir)
+
+	_, err := ReadMigrationConfig(tmpDir)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.HasPrefix(err.Error(), "unknown") {
+		t.Fatal("did not get expected error:", err)
+	}
+
+	os.RemoveAll(tmpDir)
+	_, err = ReadMigrationConfig(tmpDir)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	tmpDir = makeConfig(`}{`)
+	defer os.RemoveAll(tmpDir)
+	_, err = ReadMigrationConfig(tmpDir)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestReadMigrationConfig(t *testing.T) {
+	tmpDir := makeConfig(testConfig)
+	defer os.RemoveAll(tmpDir)
+
+	cfg, err := ReadMigrationConfig(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(cfg.DownloadSources) != 4 {
+		t.Fatal("wrong number of DownloadSources")
+	}
+	expect := []string{"IPFS", "HTTP", "127.0.0.1", "https://127.0.1.1"}
+	for i := range expect {
+		if cfg.DownloadSources[i] != expect[i] {
+			t.Errorf("wrong DownloadSource at %d", i)
+		}
+	}
+
+	if cfg.Keep != "cache" {
+		t.Error("wrong value for Keep")
+	}
+}
+
+type mockIpfsFetcher struct{}
+
+func (m *mockIpfsFetcher) Fetch(ctx context.Context, filePath string) (io.ReadCloser, error) {
+	return nil, nil
+}
+
+func (m *mockIpfsFetcher) Close() error {
+	return nil
+}
+
+func TestGetMigrationFetcher(t *testing.T) {
+	var f Fetcher
+	var err error
+
+	newIpfsFetcher := func(distPath string) Fetcher {
+		return &mockIpfsFetcher{}
+	}
+
+	downloadSources := []string{"ftp://bad.gateway.io"}
+	_, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err == nil || !strings.HasPrefix(err.Error(), "bad gateway addr") {
+		t.Fatal("Expected bad gateway address error, got:", err)
+	}
+
+	downloadSources = []string{"::bad.gateway.io"}
+	_, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err == nil || !strings.HasPrefix(err.Error(), "bad gateway addr") {
+		t.Fatal("Expected bad gateway address error, got:", err)
+	}
+
+	downloadSources = []string{"http://localhost"}
+	f, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := f.(*HttpFetcher); !ok {
+		t.Fatal("expected HttpFetcher")
+	}
+
+	downloadSources = []string{"ipfs"}
+	f, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := f.(*mockIpfsFetcher); !ok {
+		t.Fatal("expected IpfsFetcher")
+	}
+
+	downloadSources = []string{"http"}
+	f, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := f.(*HttpFetcher); !ok {
+		t.Fatal("expected HttpFetcher")
+	}
+
+	downloadSources = []string{"IPFS", "HTTPS"}
+	f, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mf, ok := f.(*MultiFetcher)
+	if !ok {
+		t.Fatal("expected MultiFetcher")
+	}
+	if mf.Len() != 2 {
+		t.Fatal("expected 2 fetchers in MultiFetcher")
+	}
+
+	downloadSources = []string{"ipfs", "https", "some.domain.io"}
+	f, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mf, ok = f.(*MultiFetcher)
+	if !ok {
+		t.Fatal("expected MultiFetcher")
+	}
+	if mf.Len() != 3 {
+		t.Fatal("expected 3 fetchers in MultiFetcher")
+	}
+
+	downloadSources = nil
+	_, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err == nil {
+		t.Fatal("expected error when no sources specified")
+	}
+
+	downloadSources = []string{"", ""}
+	_, err = GetMigrationFetcher(downloadSources, "", newIpfsFetcher)
+	if err == nil {
+		t.Fatal("expected error when empty string fetchers specified")
+	}
+}
+
+func makeConfig(configData string) string {
+	tmpDir, err := ioutil.TempDir("", "migration_test")
+	if err != nil {
+		panic(err)
+	}
+
+	cfgFile, err := os.Create(filepath.Join(tmpDir, "config"))
+	if err != nil {
+		panic(err)
+	}
+	if _, err = cfgFile.Write([]byte(configData)); err != nil {
+		panic(err)
+	}
+	if err = cfgFile.Close(); err != nil {
+		panic(err)
+	}
+	return tmpDir
 }
