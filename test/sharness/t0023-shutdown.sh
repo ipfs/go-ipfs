@@ -24,7 +24,7 @@ test_expect_success "daemon no longer running" '
   done
 '
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_expect_success "shutdown succeeds" '
   ipfs shutdown

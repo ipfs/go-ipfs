@@ -842,7 +842,7 @@ test_add_named_pipe
 test_add_pwd_is_symlink
 
 # Test daemon in offline mode
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_add_cat_file
 

@@ -312,7 +312,7 @@ test_expect_success "'ipfs ls --resolve-type=true --size=false' fails" '
   test_must_fail ipfs ls --resolve-type=true --size=false $DIR
 '
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_expect_success "'ipfs ls --resolve-type=false --size=false' ok" '
   ipfs ls --resolve-type=false --size=false $DIR > /dev/null

@@ -180,7 +180,7 @@ test_pin_dag --raw-leaves
 
 test_pin_progress
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_pins '' '' ''
 test_pins --progress '' ''

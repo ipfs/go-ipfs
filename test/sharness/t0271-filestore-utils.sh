@@ -187,7 +187,7 @@ test_init
 
 # must be in offline mode so tests that retrieve non-existent blocks
 # doesn't hang
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_filestore_adds
 
@@ -251,7 +251,7 @@ test_init
 
 # must be in offline mode so tests that retrieve non-existent blocks
 # doesn't hang
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_filestore_adds
 

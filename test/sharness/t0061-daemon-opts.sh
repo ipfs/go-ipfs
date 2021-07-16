@@ -25,7 +25,7 @@ test_expect_success SOCAT 'transport should be unencrypted ( needs socat )' '
 
 test_kill_ipfs_daemon
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 gwyaddr=$GWAY_ADDR
 apiaddr=$API_ADDR

@@ -280,6 +280,10 @@ test_launch_ipfs_daemon() {
   '
 }
 
+test_launch_ipfs_daemon_without_network() {
+  test_launch_ipfs_daemon --offline "$@"
+}
+
 do_umount() {
   if [ "$(uname -s)" = "Linux" ]; then
   fusermount -u "$1"

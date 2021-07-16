@@ -9,7 +9,7 @@ test_description="Test ipfs repo operations"
 . lib/test-lib.sh
 
 test_init_ipfs
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_expect_success "'ipfs repo gc' succeeds" '
   ipfs repo gc >gc_out_actual
@@ -63,7 +63,7 @@ test_expect_success "ipfs repo gc fully reverse ipfs add (part 2)" '
   test_cmp expected_blocks actual_blocks
 '
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_expect_success "file no longer pinned" '
   ipfs pin ls --type=recursive --quiet >actual2 &&

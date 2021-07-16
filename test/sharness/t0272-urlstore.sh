@@ -26,7 +26,7 @@ test_urlstore() {
     HASH3a=$(ipfs add -q --trickle --raw-leaves=false file3)
   '
   
-  test_launch_ipfs_daemon --offline
+  test_launch_ipfs_daemon_without_network
   
   test_expect_success "make sure files can be retrieved via the gateway" '
     curl http://127.0.0.1:$GWAY_PORT/ipfs/$HASH1a -o file1.actual &&
@@ -48,7 +48,7 @@ test_urlstore() {
     ipfs config --json Experimental.UrlstoreEnabled true
   '
   
-  test_launch_ipfs_daemon --offline
+  test_launch_ipfs_daemon_without_network
   
   test_expect_success "add files using gateway address via url store using $ADD_CMD" '
     HASH1=$(ipfs $ADD_CMD --pin=false http://127.0.0.1:$GWAY_PORT/ipfs/$HASH1a) &&

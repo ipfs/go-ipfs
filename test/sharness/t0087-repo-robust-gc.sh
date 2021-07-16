@@ -157,7 +157,7 @@ test_init_ipfs
 test_gc_robust_part1
 test_gc_robust_part2
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_gc_robust_part1
 test_gc_robust_part2

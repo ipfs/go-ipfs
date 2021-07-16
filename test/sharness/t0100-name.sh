@@ -228,7 +228,7 @@ test_name_with_self() {
         test_kill_ipfs_daemon
 
         # Test daemon in offline mode
-        test_launch_ipfs_daemon --offline
+        test_launch_ipfs_daemon_without_network
 
         test_expect_success "'ipfs name publish' fails offline mode" '
         test_expect_code 1 ipfs name publish "/ipfs/$HASH_WELCOME_DOCS"

@@ -16,7 +16,7 @@ test_expect_success "ipfs init" '
   ipfs init --profile=test > /dev/null
 '
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon_without_network
 
 test_expect_success "Add the test directory" '
   mkdir -p rootDir/ipfs &&
