@@ -12,14 +12,13 @@ import (
 
 	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
-	libp2p "github.com/ipfs/go-ipfs/core/node/libp2p"
 	icore "github.com/ipfs/interface-go-ipfs-core"
 	icorepath "github.com/ipfs/interface-go-ipfs-core/path"
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/node/libp2p"
 	"github.com/ipfs/go-ipfs/plugin/loader" // This package is needed so that all the preloaded plugins are loaded automatically
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -46,7 +45,7 @@ func setupPlugins(externalPluginsPath string) error {
 	return nil
 }
 
-func createTempRepo(ctx context.Context) (string, error) {
+func createTempRepo() (string, error) {
 	repoPath, err := ioutil.TempDir("", "ipfs-shell")
 	if err != nil {
 		return "", fmt.Errorf("failed to get temp dir: %s", err)
@@ -118,7 +117,7 @@ func spawnEphemeral(ctx context.Context) (icore.CoreAPI, error) {
 	}
 
 	// Create a Temporary Repo
-	repoPath, err := createTempRepo(ctx)
+	repoPath, err := createTempRepo()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp repo: %s", err)
 	}
@@ -131,19 +130,19 @@ func spawnEphemeral(ctx context.Context) (icore.CoreAPI, error) {
 
 func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
 	var wg sync.WaitGroup
-	peerInfos := make(map[peer.ID]*peerstore.PeerInfo, len(peers))
+	peerInfos := make(map[peer.ID]*peer.AddrInfo, len(peers))
 	for _, addrStr := range peers {
 		addr, err := ma.NewMultiaddr(addrStr)
 		if err != nil {
 			return err
 		}
-		pii, err := peerstore.InfoFromP2pAddr(addr)
+		pii, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
 			return err
 		}
 		pi, ok := peerInfos[pii.ID]
 		if !ok {
-			pi = &peerstore.PeerInfo{ID: pii.ID}
+			pi = &peer.AddrInfo{ID: pii.ID}
 			peerInfos[pi.ID] = pi
 		}
 		pi.Addrs = append(pi.Addrs, pii.Addrs...)
@@ -151,7 +150,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 
 	wg.Add(len(peerInfos))
 	for _, peerInfo := range peerInfos {
-		go func(peerInfo *peerstore.PeerInfo) {
+		go func(peerInfo *peer.AddrInfo) {
 			defer wg.Done()
 			err := ipfs.Swarm().Connect(ctx, *peerInfo)
 			if err != nil {
@@ -212,7 +211,7 @@ func main() {
 		fmt.Println("Spawning node on default repo")
 		ipfs, err := spawnDefault(ctx)
 		if err != nil {
-			fmt.Println("No IPFS repo available on the default path")
+			panic(fmt.Errorf("failed to spawnDefault node: %s", err))
 		}
 	*/
 
@@ -313,7 +312,12 @@ func main() {
 		// "/ip4/127.0.0.1/udp/4010/quic/p2p/QmZp2fhDLxjYue2RiUvLwT9MWdnbDxam32qYFnGmxZDh5L",
 	}
 
-	go connectToPeers(ctx, ipfs, bootstrapNodes)
+	go func() {
+		err := connectToPeers(ctx, ipfs, bootstrapNodes)
+		if err != nil {
+			log.Printf("failed connect to peers: %s", err)
+		}
+	}()
 
 	exampleCIDStr := "QmUaoioqU7bxezBQZkUcgcSyokatMY71sxsALxQmRRrHrj"
 
