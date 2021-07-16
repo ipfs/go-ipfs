@@ -91,7 +91,8 @@ func Dag(bs blockservice.BlockService) format.DAGService {
 func OnlineExchange(provide bool) interface{} {
 	return func(mctx helpers.MetricsCtx, lc fx.Lifecycle, host host.Host, rt routing.Routing, bs blockstore.GCBlockstore) exchange.Interface {
 		bitswapNetwork := network.NewFromIpfsHost(host, rt)
-		exch := bitswap.New(helpers.LifecycleCtx(mctx, lc), bitswapNetwork, bs, bitswap.ProvideEnabled(provide))
+		exch := bitswap.New(helpers.LifecycleCtx(mctx, lc), bitswapNetwork, bs, bitswap.ProvideEnabled(provide),
+			bitswap.EngineBlockstoreWorkerCount(2000), bitswap.TaskWorkerCount(500), bitswap.EngineTaskWorkerCount(500), bitswap.MaxOutstandingBytesPerPeer(1 << 21))
 		lc.Append(fx.Hook{
 			OnStop: func(ctx context.Context) error {
 				return exch.Close()

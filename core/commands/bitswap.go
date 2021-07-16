@@ -155,6 +155,8 @@ var bitswapStatCmd = &cmds.Command{
 				fmt.Fprintf(w, "\t\t%s\n", enc.Encode(k))
 			}
 
+			fmt.Fprintf(w, "\tinboundreqs [%d]\n", s.QueuedRequests)
+
 			fmt.Fprintf(w, "\tpartners [%d]\n", len(s.Peers))
 			if verbose {
 				for _, p := range s.Peers {
