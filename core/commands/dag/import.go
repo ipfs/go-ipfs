@@ -55,6 +55,10 @@ func dagImport(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment
 		return done.err
 	}
 
+	if err := res.Emit(&CarImportOutput{BlockCount: &done.blockCount}); err != nil {
+		return err
+	}
+
 	// It is not guaranteed that a root in a header is actually present in the same ( or any )
 	// .car file. This is the case in version 1, and ideally in further versions too
 	// Accumulate any root CID seen in a header, and supplement its actual node if/when encountered
@@ -101,7 +105,7 @@ func dagImport(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment
 				failedPins++
 			}
 
-			if err := res.Emit(&CarImportOutput{Root: ret}); err != nil {
+			if err := res.Emit(&CarImportOutput{Root: &ret}); err != nil {
 				return err
 			}
 		}
@@ -126,6 +130,7 @@ func importWorker(req *cmds.Request, re cmds.ResponseEmitter, api iface.CoreAPI,
 	batch := ipld.NewBatch(req.Context, api.Dag())
 
 	roots := make(map[cid.Cid]struct{})
+	var blockCount uint64
 
 	it := req.Files.Entries()
 	for it.Next() {
@@ -176,6 +181,7 @@ func importWorker(req *cmds.Request, re cmds.ResponseEmitter, api iface.CoreAPI,
 				if err := batch.Add(req.Context, nd); err != nil {
 					return err
 				}
+				blockCount++
 			}
 
 			return nil
@@ -197,5 +203,5 @@ func importWorker(req *cmds.Request, re cmds.ResponseEmitter, api iface.CoreAPI,
 		return
 	}
 
-	ret <- importResult{roots: roots}
+	ret <- importResult{blockCount: blockCount, roots: roots}
 }

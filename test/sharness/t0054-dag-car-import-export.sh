@@ -56,12 +56,14 @@ run_online_imp_exp_tests() {
   reset_blockstore 1
 
   cat > basic_import_expected <<EOE
+Imported 1198 blocks
 Pinned root${tab}bafkqaaa${tab}success
 Pinned root${tab}bafy2bzaceaxm23epjsmh75yvzcecsrbavlmkcxnva66bkdebdcnyw3bjrc74u${tab}success
 Pinned root${tab}bafy2bzaced4ueelaegfs5fqu4tzsh6ywbbpfk3cxppupmxfdhbpbhzawfw5oy${tab}success
 EOE
 
   cat >naked_root_import_json_expected <<EOE
+{"BlockCount":0}
 {"Root":{"Cid":{"/":"bafy2bzaceaxm23epjsmh75yvzcecsrbavlmkcxnva66bkdebdcnyw3bjrc74u"},"PinErrorMsg":""}}
 {"Root":{"Cid":{"/":"bafy2bzaced4ueelaegfs5fqu4tzsh6ywbbpfk3cxppupmxfdhbpbhzawfw5oy"},"PinErrorMsg":""}}
 EOE
@@ -170,6 +172,7 @@ test_expect_success "correct error" '
 
 
 cat >multiroot_import_json_expected <<EOE
+{"BlockCount":2825}
 {"Root":{"Cid":{"/":"bafy2bzaceb55n7uxyfaelplulk3ev2xz7gnq6crncf3ahnvu46hqqmpucizcw"},"PinErrorMsg":""}}
 {"Root":{"Cid":{"/":"bafy2bzacebedrc4n2ac6cqdkhs7lmj5e4xiif3gu7nmoborihajxn3fav3vdq"},"PinErrorMsg":""}}
 {"Root":{"Cid":{"/":"bafy2bzacede2hsme6hparlbr4g2x6pylj43olp4uihwjq3plqdjyrdhrv7cp4"},"PinErrorMsg":""}}
@@ -182,14 +185,17 @@ test_expect_success "multiroot import expected output" '
 '
 
 
+cat >pin_import_expected << EOE
+{"BlockCount":1198}
+EOE
 test_expect_success "pin-less import works" '
   ipfs dag import --enc=json --pin-roots=false \
   ../t0054-dag-car-import-export-data/lotus_devnet_genesis.car \
   ../t0054-dag-car-import-export-data/lotus_testnet_export_128.car \
     > no-pin_import_actual
 '
-test_expect_success "expected silence on --pin-roots=false" '
-  test_cmp /dev/null no-pin_import_actual
+test_expect_success "expected no pins on --pin-roots=false" '
+  test_cmp pin_import_expected no-pin_import_actual
 '
 
 
