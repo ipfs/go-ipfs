@@ -84,6 +84,13 @@ test_expect_success "GET IPFS nonexistent file returns code expected (404)" '
   test_curl_resp_http_code "http://127.0.0.1:$port/ipfs/$HASH2/pleaseDontAddMe" "HTTP/1.1 404 Not Found"
 '
 
+# https://github.com/ipfs/go-ipfs/issues/8230
+test_expect_success "GET IPFS inlined zero-length data object returns ok code (200)" '
+  curl -sD - "http://127.0.0.1:$port/ipfs/bafkqaaa" > empty_ok_response &&
+  test_should_contain "HTTP/1.1 200 OK" empty_ok_response &&
+  test_should_contain "Content-Length: 0" empty_ok_response
+'
+
 test_expect_success "GET /ipfs/ipfs/{cid} returns redirect to the valid path" '
   curl -sD - "http://127.0.0.1:$port/ipfs/ipfs/bafkqaaa?query=to-remember" > response_with_double_ipfs_ns &&
   test_should_contain "<meta http-equiv=\"refresh\" content=\"10;url=/ipfs/bafkqaaa?query=to-remember\" />" response_with_double_ipfs_ns &&

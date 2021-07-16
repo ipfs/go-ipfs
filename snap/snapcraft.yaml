@@ -29,7 +29,7 @@ parts:
     source-tag: master
     plugin: go
     # keep me up to date with the go version that go-ipfs expects to be built with.
-    go-channel: 1.14/stable
+    go-channel: 1.16/stable
     go-importpath: github.com/ipfs/go-ipfs
     build-packages:
         - build-essential
