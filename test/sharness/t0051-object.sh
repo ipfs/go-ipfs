@@ -30,7 +30,7 @@ test_object_cmd() {
 
   test_expect_success "'ipfs add testData' succeeds" '
     printf "Hello Mars" >expected_in &&
-    ipfs add expected_in >actual_Addout
+    ipfs add --cid-version 0 expected_in >actual_Addout
   '
 
   test_expect_success "'ipfs add testData' output looks good" '
@@ -177,7 +177,7 @@ test_object_cmd() {
 
   test_expect_success "setup: add UTF-8 test file" '
     HASH="QmNY5sQeH9ttVCg24sizH71dNbcZTpGd7Yb3YwsKZ4jiFP" &&
-    ipfs add ../t0051-object-data/UTF-8-test.txt >actual &&
+    ipfs add --cid-version 0 ../t0051-object-data/UTF-8-test.txt >actual &&
     echo "added $HASH UTF-8-test.txt" >expected &&
     test_cmp expected actual
   '
@@ -263,7 +263,7 @@ test_object_cmd() {
 
   test_expect_success "multilayer ipfs patch works" '
     echo "hello world" > hwfile &&
-    FILE=$(ipfs add -q hwfile) &&
+    FILE=$(ipfs add --cid-version 0 -q hwfile) &&
     EMPTY=$(ipfs object new unixfs-dir) &&
     ONE=$(ipfs object patch $EMPTY add-link b $EMPTY) &&
     TWO=$(ipfs object patch $EMPTY add-link a $ONE) &&

@@ -15,10 +15,10 @@ test_expect_success "make a few test files" '
   echo "bar" > file2 &&
   echo "baz" > file3 &&
   echo "qux" > file4 &&
-  HASH1=$(ipfs add --pin=false -q file1) &&
-  HASH2=$(ipfs add --pin=false -q file2) &&
-  HASH3=$(ipfs add --pin=false -q file3) &&
-  HASH4=$(ipfs add --pin=false -q file4)
+  HASH1=$(ipfs add --cid-version 0 --pin=false -q file1) &&
+  HASH2=$(ipfs add --cid-version 0 --pin=false -q file2) &&
+  HASH3=$(ipfs add --cid-version 0 --pin=false -q file3) &&
+  HASH4=$(ipfs add --cid-version 0 --pin=false -q file4)
 '
 
 test_expect_success "make an ipld object in json" '
@@ -116,7 +116,7 @@ test_dag_cmd() {
   '
 
   test_expect_success "add a normal file" '
-    HASH=$(echo "foobar" | ipfs add -q)
+    HASH=$(echo "foobar" | ipfs add --cid-version 0 -q)
   '
 
   test_expect_success "can view protobuf object with dag get" '
@@ -169,7 +169,7 @@ test_dag_cmd() {
 
   test_expect_success "prepare dag-pb object" '
     echo foo > test_file &&
-    HASH=$(ipfs add -wq test_file | tail -n1)
+    HASH=$(ipfs add --cid-version 0 -wq test_file | tail -n1)
   '
 
   test_expect_success "dag put with json dag-pb works" '
@@ -279,7 +279,7 @@ test_dag_cmd() {
   '
 
   test_expect_success "dag stat of simple UnixFS object" '
-    BASIC_UNIXFS=$(echo "1234" | ipfs add --pin=false -q) &&
+    BASIC_UNIXFS=$(echo "1234" | ipfs add --cid-version 0 --pin=false -q) &&
     ipfs dag stat $BASIC_UNIXFS > actual_stat_basic_unixfs &&
     echo "Size: 13, NumBlocks: 1" > exp_stat_basic_unixfs &&
     test_cmp exp_stat_basic_unixfs actual_stat_basic_unixfs
@@ -288,7 +288,7 @@ test_dag_cmd() {
   # The multiblock file is just 10000000 copies of the number 1
   # As most of its data is replicated it should have a small number of blocks
   test_expect_success "dag stat of multiblock UnixFS object" '
-    MULTIBLOCK_UNIXFS=$(printf "1%.0s" {1..10000000} | ipfs add --pin=false -q) &&
+    MULTIBLOCK_UNIXFS=$(printf "1%.0s" {1..10000000} | ipfs add --cid-version 0 --pin=false -q) &&
     ipfs dag stat $MULTIBLOCK_UNIXFS > actual_stat_multiblock_unixfs &&
     echo "Size: 302582, NumBlocks: 3" > exp_stat_multiblock_unixfs &&
     test_cmp exp_stat_multiblock_unixfs actual_stat_multiblock_unixfs
@@ -298,7 +298,7 @@ test_dag_cmd() {
     mkdir -p unixfsdir &&
     echo "1234" > unixfsdir/small.txt
     printf "1%.0s" {1..10000000} > unixfsdir/many1s.txt &&
-    DIRECTORY_UNIXFS=$(ipfs add -r --pin=false -Q unixfsdir) &&
+    DIRECTORY_UNIXFS=$(ipfs add --cid-version 0 -r --pin=false -Q unixfsdir) &&
     ipfs dag stat $DIRECTORY_UNIXFS > actual_stat_directory_unixfs &&
     echo "Size: 302705, NumBlocks: 5" > exp_stat_directory_unixfs &&
     test_cmp exp_stat_directory_unixfs actual_stat_directory_unixfs

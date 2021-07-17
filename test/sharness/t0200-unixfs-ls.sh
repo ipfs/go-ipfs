@@ -20,7 +20,7 @@ test_ls_cmd() {
     random 128 42 >testData/d1/128 &&
     echo "world" >testData/d2/a &&
     random 1024 42 >testData/d2/1024 &&
-    ipfs add -r testData >actual_add
+    ipfs add --cid-version 0 -r testData >actual_add
   '
 
   test_expect_success "'ipfs add' output looks good" '
