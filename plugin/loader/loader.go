@@ -298,7 +298,7 @@ func (loader *PluginLoader) Start(node *core.IpfsNode) error {
 	return loader.transition(loaderStarting, loaderStarted)
 }
 
-// StopDaemon stops all long-running plugins.
+// Close stops all long-running plugins.
 func (loader *PluginLoader) Close() error {
 	switch loader.state {
 	case loaderClosing, loaderFailed, loaderClosed:
