@@ -84,4 +84,26 @@ test_expect_success "output looks good" '
   grep "Please get fs-repo-migrations from https://dist.ipfs.io" daemon_out > /dev/null
 '
 
+test_expect_success "ipfs repo migrate succeed" '
+  test_expect_code 0 ipfs repo migrate > migrate_out
+'
+
+test_expect_success "output looks good" '
+  grep "Found outdated fs-repo, starting migration." migrate_out > /dev/null &&
+  grep "Success: fs-repo migrated to version $IPFS_REPO_VER" true_out > /dev/null
+'
+
+test_expect_success "manually reset repo version to 11" '
+  echo "$IPFS_REPO_VER" > "$IPFS_PATH"/version
+'
+
+test_expect_success "detect repo does not need migration" '
+  test_expect_code 0 ipfs repo migrate > migrate_out
+'
+
+test_expect_success "output looks good" '
+  grep "Repo does not require migration" migrate_out > /dev/null
+'
+cat migrate_out
+
 test_done
