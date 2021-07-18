@@ -45,6 +45,7 @@ const (
 	hashOptionName        = "hash"
 	inlineOptionName      = "inline"
 	inlineLimitOptionName = "inline-limit"
+	reconstructOptionName = "reconstruct"
 )
 
 const adderOutChanSize = 8
@@ -140,6 +141,7 @@ only-hash, and progress/status related flags) will change the final hash.
 		cmds.StringOption(hashOptionName, "Hash function to use. Implies CIDv1 if not sha2-256. (experimental)").WithDefault("sha2-256"),
 		cmds.BoolOption(inlineOptionName, "Inline small blocks into CIDs. (experimental)"),
 		cmds.IntOption(inlineLimitOptionName, "Maximum block size to inline. (experimental)").WithDefault(32),
+		cmds.StringOption(reconstructOptionName, "Iterate through known params to reconstruct a CID from a file (experimental)"),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -228,6 +230,101 @@ only-hash, and progress/status related flags) will change the final hash.
 		}
 
 		opts = append(opts, nil) // events option placeholder
+
+		revivalTargetCid, _ := req.Options[reconstructOptionName].(string)
+
+		var defaultOptions = []cmds.OptMap{
+			cmds.OptMap{
+				"inline-limit": 32,
+				"chunker":      "size-262144",
+				"quiet":        true,
+				"hash":         "sha2-512",
+				"encoding":     "json",
+			},
+			cmds.OptMap{
+				"inline-limit": 32,
+				"chunker":      "size-262144",
+				"quiet":        true,
+				"hash":         "sha2-256",
+				"encoding":     "json",
+			},
+		}
+
+		if revivalTargetCid != "" {
+
+			for _, defaultOpts := range defaultOptions {
+				special := req.Files
+				// fmt.Println("\n - - - - - ", index, "\n")
+				fmt.Println(defaultOpts)
+
+				inlineLimit, _ := defaultOpts[inlineLimitOptionName].(int)
+				chunker, _ := defaultOpts[chunkerOptionName].(string)
+				hashFunStr, _ := defaultOpts[hashOptionName].(string)
+				hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
+
+				if !ok {
+					return fmt.Errorf("unrecognized hash function: %s", strings.ToLower(hashFunStr))
+				}
+				myOpts := []options.UnixfsAddOption{
+					options.Unixfs.Hash(hashFunCode),
+					options.Unixfs.Inline(inline),
+					options.Unixfs.InlineLimit(inlineLimit),
+					options.Unixfs.Chunker(chunker),
+
+					options.Unixfs.Pin(dopin),
+					options.Unixfs.HashOnly(true),
+					options.Unixfs.FsCache(fscache),
+					options.Unixfs.Nocopy(nocopy),
+
+					options.Unixfs.Progress(progress),
+					options.Unixfs.Silent(silent),
+				}
+
+				if cidVerSet {
+					myOpts = append(myOpts, options.Unixfs.CidVersion(cidVer))
+				}
+
+				if rbset {
+					myOpts = append(myOpts, options.Unixfs.RawLeaves(rawblks))
+				}
+
+				if trickle {
+					myOpts = append(myOpts, options.Unixfs.Layout(options.TrickleLayout))
+				}
+
+				myOpts = append(myOpts, nil) // events option placeholder
+
+				fmt.Println(myOpts)
+
+				// var added int
+				addit := special.Entries()
+
+				for addit.Next() {
+					fmt.Println("In Loop")
+					events := make(chan interface{}, adderOutChanSize)
+					myOpts[len(myOpts)-1] = options.Unixfs.Events(events)
+
+					v, _ := api.Unixfs().Add(req.Context, addit.Node(), myOpts...)
+					h := enc.Encode(v.Cid())
+
+					// if err := res.Emit(&AddEvent{
+					// 	Name:  "cat.jpg",
+					// 	Hash:  h,
+					// 	Bytes: 0,
+					// 	Size:  "378153",
+					// }); err != nil {
+					// 	return err
+					// }
+
+					fmt.Println("Hash: ", h)
+					if h == revivalTargetCid {
+						fmt.Println("SUCCESS!!")
+						return nil
+					}
+				}
+			}
+			return nil
+		}
 
 		var added int
 		addit := toadd.Entries()
