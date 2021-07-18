@@ -115,6 +115,34 @@ test_expect_success "GET /ipfs/ipns/{peerid} returns redirect to the valid path"
   test_should_contain "<link rel=\"canonical\" href=\"/ipns/${PEERID}?query=to-remember\" />" response_with_ipfs_ipns_ns
 '
 
+# Headers related to caching
+# Cache-Control: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+# Last-Modified: https://github.com/ipfs/go-ipfs/issues/7968
+# Etag: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+
+# /ipfs/*
+test_expect_success "GET for /ipfs/ should include the ancient Last-Modified header" "
+  curl -svX GET 'http://127.0.0.1:$port/ipfs/$HASH' > curl_out 2>&1 &&
+  grep -i 'Last-Modified: Thu, 01 Jan 1970 00:00:01 GMT' curl_out
+"
+test_expect_success "GET for /ipfs/ should include maxed out Cache-Control header" "
+  grep -i 'Cache-Control: public, max-age=29030400, immutable' curl_out
+"
+test_expect_success "GET for /ipfs/ should include Etag header set to the CID" "
+  grep -i 'Etag: \"${HASH}\"' curl_out
+"
+
+# /ipns/*
+test_expect_success "GET for /ipns/ should not include Last-Modified header" "
+  curl -svX GET 'http://127.0.0.1:$port/ipns/$PEERID' > curl_out 2>&1 &&
+  test_must_fail grep -i 'Last-Modified' curl_out
+"
+test_expect_success "GET for /ipns/ should include Etag header set to the current CID" "
+  grep -i 'Etag: \"${HASH}\"' curl_out
+"
+# TODO: set Cache-Control for /ipns/ based on the TTL of IPNS or DNSLink record
+
+
 test_expect_success "GET invalid IPFS path errors" '
   test_must_fail curl -sf "http://127.0.0.1:$port/ipfs/12345"
 '
