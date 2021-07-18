@@ -51,6 +51,7 @@ type GcResult struct {
 const (
 	repoStreamErrorsOptionName = "stream-errors"
 	repoQuietOptionName        = "quiet"
+	repoSilentOptionName       = "silent"
 )
 
 var repoGcCmd = &cmds.Command{
@@ -65,6 +66,7 @@ order to reclaim hard disk space.
 	Options: []cmds.Option{
 		cmds.BoolOption(repoStreamErrorsOptionName, "Stream errors."),
 		cmds.BoolOption(repoQuietOptionName, "q", "Write minimal output."),
+		cmds.BoolOption(repoSilentOptionName, "Write no output."),
 	},
 	Run: func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
@@ -111,6 +113,11 @@ order to reclaim hard disk space.
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, gcr *GcResult) error {
 			quiet, _ := req.Options[repoQuietOptionName].(bool)
+			silent, _ := req.Options[repoSilentOptionName].(bool)
+
+			if silent {
+				return nil
+			}
 
 			if gcr.Error != "" {
 				_, err := fmt.Fprintf(w, "Error: %s\n", gcr.Error)
