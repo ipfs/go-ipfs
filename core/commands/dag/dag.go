@@ -2,6 +2,7 @@ package dagcmd
 
 import (
 	"fmt"
+	"github.com/ipfs/go-ipfs/core/coreapi"
 	"io"
 
 	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
@@ -55,13 +56,7 @@ type ResolveOutput struct {
 
 // CarImportOutput is the output type of the 'dag import' commands
 type CarImportOutput struct {
-	Root RootMeta
-}
-
-// RootMeta is the metadata for a root pinning response
-type RootMeta struct {
-	Cid         cid.Cid
-	PinErrorMsg string
+	Root coreapi.RootMeta
 }
 
 // DagPutCmd is a command for adding a dag node
@@ -154,11 +149,6 @@ var DagResolveCmd = &cmds.Command{
 		}),
 	},
 	Type: ResolveOutput{},
-}
-
-type importResult struct {
-	roots map[cid.Cid]struct{}
-	err   error
 }
 
 // DagImportCmd is a command for importing a car to ipfs

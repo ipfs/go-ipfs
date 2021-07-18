@@ -1,6 +1,7 @@
 package dagcmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,13 +10,14 @@ import (
 
 	"github.com/cheggaaa/pb"
 	cid "github.com/ipfs/go-cid"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
 	ipld "github.com/ipfs/go-ipld-format"
-	mdag "github.com/ipfs/go-merkledag"
-
-	cmds "github.com/ipfs/go-ipfs-cmds"
-	gocar "github.com/ipld/go-car"
 )
+
+type dagExportAPI interface {
+	Export(ctx context.Context, c cid.Cid) (io.ReadCloser, <-chan error)
+}
 
 func dagExport(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 
@@ -32,50 +34,15 @@ func dagExport(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment
 		return err
 	}
 
-	// Code disabled until descent-issue in go-ipld-prime is fixed
-	// https://github.com/ribasushi/gip-muddle-up
-	//
-	// sb := gipselectorbuilder.NewSelectorSpecBuilder(gipfree.NodeBuilder())
-	// car := gocar.NewSelectiveCar(
-	// 	req.Context,
-	// 	<needs to be fixed to take format.NodeGetter as well>,
-	// 	[]gocar.Dag{gocar.Dag{
-	// 		Root: c,
-	// 		Selector: sb.ExploreRecursive(
-	// 			gipselector.RecursionLimitNone(),
-	// 			sb.ExploreAll(sb.ExploreRecursiveEdge()),
-	// 		).Node(),
-	// 	}},
-	// )
-	// ...
-	// if err := car.Write(pipeW); err != nil {}
+	dagExport, ok := api.Dag().(dagExportAPI)
+	if !ok {
+		return fmt.Errorf("API does not support DAG export")
+	}
 
-	pipeR, pipeW := io.Pipe()
+	rc, errCh := dagExport.Export(req.Context, c)
 
-	errCh := make(chan error, 2) // we only report the 1st error
-	go func() {
-		defer func() {
-			if err := pipeW.Close(); err != nil {
-				errCh <- fmt.Errorf("stream flush failed: %s", err)
-			}
-			close(errCh)
-		}()
-
-		if err := gocar.WriteCar(
-			req.Context,
-			mdag.NewSession(
-				req.Context,
-				api.Dag(),
-			),
-			[]cid.Cid{c},
-			pipeW,
-		); err != nil {
-			errCh <- err
-		}
-	}()
-
-	if err := res.Emit(pipeR); err != nil {
-		pipeR.Close() // ignore the error if any
+	if err := res.Emit(rc); err != nil {
+		rc.Close() // ignore the error if any
 		return err
 	}
 
