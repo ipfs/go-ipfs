@@ -2,6 +2,9 @@ package libp2p
 
 import (
 	"context"
+	blockstore "github.com/ipfs/go-ipfs-blockstore"
+	"github.com/ipfs/go-ipfs/hub"
+	libp2p "github.com/libp2p/go-libp2p-core"
 	"sort"
 	"time"
 
@@ -134,9 +137,11 @@ func Routing(in p2pOnlineRoutingIn) routing.Routing {
 		return routers[i].Priority < routers[j].Priority
 	})
 
-	irouters := make([]routing.Routing, len(routers))
-	for i, v := range routers {
-		irouters[i] = v.Routing
+	irouters := make([]routing.Routing, 0, len(routers))
+	for _, v := range routers {
+		if v.Routing != nil {
+			irouters = append(irouters, v.Routing)
+		}
 	}
 
 	return routinghelpers.Tiered{
@@ -178,4 +183,77 @@ func PubsubRouter(mctx helpers.MetricsCtx, lc fx.Lifecycle, in p2pPSRoutingIn) (
 			Priority: 100,
 		},
 	}, psRouter, nil
+}
+
+func Hub(clientEnabled, serverEnabled bool) interface{} {
+	const topicID = "/ipfs/content-routing/1.0.0"
+	return func(lc fx.Lifecycle, in p2pPSRoutingIn, bs blockstore.GCBlockstore) (out p2pRouterOut, client *hub.Client, server *hub.Server, err error) {
+		var topic *pubsub.Topic
+		topic, err = in.PubSub.Join(topicID)
+		if err != nil {
+			return p2pRouterOut{}, nil, nil, err
+		}
+
+		if clientEnabled {
+			out, client, err = HubClient(topic)
+			if err != nil {
+				return p2pRouterOut{}, nil, nil, err
+			}
+		}
+
+		if serverEnabled {
+			server, err = HubServer(lc, topic, bs, in.Host)
+			if err != nil {
+				return p2pRouterOut{}, nil, nil, err
+			}
+		}
+
+		lc.Append(fx.Hook{
+			OnStop: func(ctx context.Context) error {
+				return nil
+				//return topic.Close()
+			},
+		})
+
+		return out, client, server, nil
+	}
+}
+
+func HubServer(lc fx.Lifecycle, topic *pubsub.Topic, bs blockstore.GCBlockstore, h libp2p.Host) (*hub.Server, error) {
+	sub, err := topic.Subscribe()
+	if err != nil {
+		return nil, err
+	}
+
+	server, err := hub.NewServer(sub, bs, h)
+	if err != nil {
+		return nil, err
+	}
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			return server.Start()
+		},
+		OnStop: func(ctx context.Context) error {
+			return server.Close()
+		},
+	})
+
+	return server, nil
+}
+
+func HubClient(topic *pubsub.Topic) (p2pRouterOut, *hub.Client, error) {
+	client, err := hub.NewClient(topic)
+	if err != nil {
+		return p2pRouterOut{}, nil, err
+	}
+
+	return p2pRouterOut{
+		Router: Router{
+			Routing: &routinghelpers.Compose{
+				ContentRouting: client,
+			},
+			Priority: 500,
+		},
+	}, client, nil
 }

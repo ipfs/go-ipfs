@@ -70,7 +70,7 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 	// parse PubSub config
 
 	ps, disc := fx.Options(), fx.Options()
-	if bcfg.getOpt("pubsub") || bcfg.getOpt("ipnsps") {
+	if bcfg.getOpt("pubsub") || bcfg.getOpt("ipnsps") || bcfg.getOpt("hubserver") || bcfg.getOpt("hubclient") {
 		disc = fx.Provide(libp2p.TopicDiscovery())
 
 		var pubsubOptions []pubsub.Option
@@ -141,6 +141,7 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		fx.Provide(libp2p.Routing),
 		fx.Provide(libp2p.BaseRouting(cfg.Experimental.AcceleratedDHTClient)),
 		maybeProvide(libp2p.PubsubRouter, bcfg.getOpt("ipnsps")),
+		maybeProvide(libp2p.Hub(bcfg.getOpt("hubclient"), bcfg.getOpt("hubserver")), bcfg.getOpt("hubclient") || bcfg.getOpt("hubserver")),
 
 		maybeProvide(libp2p.BandwidthCounter, !cfg.Swarm.DisableBandwidthMetrics),
 		maybeProvide(libp2p.NatPortMap, !cfg.Swarm.DisableNatPortMap),

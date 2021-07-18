@@ -66,6 +66,8 @@ const (
 	enablePubSubKwd           = "enable-pubsub-experiment"
 	enableIPNSPubSubKwd       = "enable-namesys-pubsub"
 	enableMultiplexKwd        = "enable-mplex-experiment"
+	enableHubServerKwd        = "enable-hub-server"
+	enableHubClientKwd        = "enable-hub-client"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
@@ -178,6 +180,8 @@ Headers.
 		cmds.BoolOption(migrateKwd, "If true, assume yes at the migrate prompt. If false, assume no."),
 		cmds.BoolOption(enablePubSubKwd, "Instantiate the ipfs daemon with the experimental pubsub feature enabled."),
 		cmds.BoolOption(enableIPNSPubSubKwd, "Enable IPNS record distribution through pubsub; enables pubsub."),
+		cmds.BoolOption(enableHubServerKwd, "Enable Hub Server; enables pubsub."),
+		cmds.BoolOption(enableHubClientKwd, "Enable Hub Client; enables pubsub."),
 		cmds.BoolOption(enableMultiplexKwd, "DEPRECATED"),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
@@ -350,6 +354,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	offline, _ := req.Options[offlineKwd].(bool)
 	ipnsps, _ := req.Options[enableIPNSPubSubKwd].(bool)
 	pubsub, _ := req.Options[enablePubSubKwd].(bool)
+	hubserver, _ := req.Options[enableHubServerKwd].(bool)
+	hubclient, _ := req.Options[enableHubClientKwd].(bool)
 	if _, hasMplex := req.Options[enableMultiplexKwd]; hasMplex {
 		log.Errorf("The mplex multiplexer has been enabled by default and the experimental %s flag has been removed.")
 		log.Errorf("To disable this multiplexer, please configure `Swarm.Transports.Multiplexers'.")
@@ -362,8 +368,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		Online:                      !offline,
 		DisableEncryptedConnections: unencrypted,
 		ExtraOpts: map[string]bool{
-			"pubsub": pubsub,
-			"ipnsps": ipnsps,
+			"pubsub":    pubsub,
+			"ipnsps":    ipnsps,
+			"hubserver": hubserver,
+			"hubclient": hubclient,
 		},
 		//TODO(Kubuxu): refactor Online vs Offline by adding Permanent vs Ephemeral
 	}
