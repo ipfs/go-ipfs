@@ -51,6 +51,7 @@ ipfs peers in the internet.
 		"disconnect": swarmDisconnectCmd,
 		"filters":    swarmFiltersCmd,
 		"peers":      swarmPeersCmd,
+		"peering":    swarmPeeringCmd,
 	},
 }
 
@@ -60,6 +61,47 @@ const (
 	swarmLatencyOptionName   = "latency"
 	swarmDirectionOptionName = "direction"
 )
+
+var swarmPeeringCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "modify the peering subsystem.",
+		ShortDescription: `
+'ipfs swarm peering' is a tool to manupulate the peering subsystem. 
+Peers in the peering subsystem is maintained to be connected, reconnected 
+on disconnect with a back-off.
+`,
+	},
+	Subcommands: map[string]*cmds.Command{
+		"rm": swarmPeeringRmCmd,
+	},
+}
+
+var swarmPeeringRmCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "remove a peer from the peering subsystem.",
+		ShortDescription: `
+'ipfs swarm peering rm' remove peers from the peering subsystem.
+`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("ID", true, true, "IDs of peers to remove"),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		args := req.Arguments
+		node, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		for _, arg := range args {
+			id, err := peer.Decode(arg)
+			if err != nil {
+				return fmt.Errorf("invalid peer id: %s", arg)
+			}
+			node.Peering.RemovePeer(id)
+		}
+		return nil
+	},
+}
 
 var swarmPeersCmd = &cmds.Command{
 	Helptext: cmds.HelpText{

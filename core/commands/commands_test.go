@@ -226,6 +226,8 @@ func TestCommands(t *testing.T) {
 		"/swarm/filters/add",
 		"/swarm/filters/rm",
 		"/swarm/peers",
+		"/swarm/peering",
+		"/swarm/peering/rm",
 		"/tar",
 		"/tar/add",
 		"/tar/cat",
