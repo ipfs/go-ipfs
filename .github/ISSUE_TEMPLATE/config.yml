@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+ - name: Security issues
+   url: https://github.com/ipfs/community/blob/master/CONTRIBUTING.md#security-issues
+   about: Please report security issues by email to security@ipfs.io
  - name: Getting Help on IPFS
    url: https://ipfs.io/help
    about: All information about how and where to get help on IPFS.
@@ -12,6 +15,9 @@ contact_links:
  - name: HTTP API Reference
    url: https://docs.ipfs.io/reference/http/api/#api-v0-add
    about: Documentation of all go-ipfs HTTP API endpoints.
+ - name: CLI Reference
+   url: https://docs.ipfs.io/reference/cli/
+   about: Documentation of the go-ipfs command line.
  - name: IPFS Official Forum
    url: https://discuss.ipfs.io
    about: Please post general questions, support requests, and discussions here.

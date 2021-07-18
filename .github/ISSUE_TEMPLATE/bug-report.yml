@@ -1,0 +1,156 @@
+name: Report a bug in go-ipfs
+description: Report an issue related to go-ipfs.
+labels: kind/bug, need/triage
+title: ""
+issue_body: true
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Make sure you are running the [latest version of go-ipfs][releases] before reporting an issue.
+
+        If you have an enhancement or feature request for go-ipfs, please select [a different option][issues].
+        
+        Please report possible security issues by email to security@ipfs.io
+
+        [issues]: https://github.com/ipfs/go-ipfs/issues/new/choose
+        [releases]: https://github.com/ipfs/go-ipfs/releases
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      description: Please verify that you've followed these steps
+      options:
+        - label: I have searched on the [issue tracker](https://github.com/ipfs/go-ipfs/issues?q=is%3Aissue) for my bug.
+          required: true
+        - label: I have updated to the latest available [go-ipfs version](https://github.com/ipfs/go-ipfs/releases).
+          required: true
+        - label: I have cleared the cache of my browser (if related to a web-gateway functionality).
+          required: true
+        - label: I have tried a different browser to see if it is related to my browser (if related to a web-gateway functionality).
+          required: true
+  - type: checkboxes
+    attributes:
+      label: Installation method
+      description: Please select your installation method
+      options:
+        - label: Binary provided by my distribution
+          required: false
+        - label: Binary from dist.ipfs.io
+          required: false
+        - label: Compiled via Go Compiler
+          required: false
+        - label: Compiled via GCC frontend
+          required: false
+  - type: markdown
+    attributes:
+      value: |
+        ## The problem
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Describe the issue you are experiencing
+      description: Provide a clear and concise description of what the bug is.
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Describe the behavior you expected
+      description: Describe what you expected to happen or it should look/behave.
+  - type: textarea
+    validations:
+      required: false
+    attributes:
+      label: Steps to reproduce the issue
+      description: |
+        If the bug is reproducible tell us exactly how to reproduce your issue.
+        Provide clear and concise step-by-step instructions and add code snippets if needed.
+      value: |
+        1.
+        2.
+        3.
+        ...
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: In which version of go-ipfs have you experienced the issue?
+      placeholder: 1.2.3
+      description: >
+        If unsure check `ipfs version --all`
+  - type: input
+    attributes:
+      label: What was the last working version of go-ipfs?
+      placeholder: 1.2.3
+      description: >
+        If known, otherwise leave blank.
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: Which golang/gcc version has been used to compile go-ipfs?
+      placeholder: go1.2.3
+      description: >
+        If unsure check `ipfs version --all`
+  - type: input
+    attributes:
+      label: "If related: Which browsers have you tried?"
+      placeholder: Firefox 86.0 (64-bit), Google Chrome 89.0.4389.72
+      description: >
+        Provide the full name and don't forget to add the version!
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: Which operating system are you using to run go-ipfs?
+      placeholder: ArchLinux
+      description: >
+        Don't forget to add the version!
+  - type: markdown
+    attributes:
+      value: |
+        # Details
+
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: Daemon command line arguments
+      placeholder: /usr/sbin/ipfs daemon --migrate --enable-gc
+      description: >
+        Which flags are set to start up the go-ipfs daemon?
+  - type: textarea
+    attributes:
+      label: go-ipfs config
+      description: >
+        How is your go-ipfs daemon configured?
+      value: |
+        ```yaml
+        # Paste the output of 'ipfs config show' here.
+
+        ```
+  - type: textarea
+    attributes:
+      label: go-ipfs errors shown in your console/system log
+      description: >
+        If you come across any error logs, e.g., in your
+        console/system log please provide them.
+      value: |
+        ```txt
+        # Paste your logs here.
+
+        ```
+  - type: markdown
+    attributes:
+      value: |
+        ## Additional information
+  - type: markdown
+    attributes:
+      value: |
+        If you have any additional information for us, use the field below.
+        Please note, you can attach screenshots or screen recordings here,
+        by dragging and dropping files in the field below.
