@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	gopath "path"
 	"strconv"
+	"time"
 
 	"github.com/ipfs/go-cid"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
@@ -79,6 +81,11 @@ type Adder struct {
 	tempRoot   cid.Cid
 	CidBuilder cid.Builder
 	liveNodes  uint64
+
+	PreserveMode  bool
+	PreserveMtime bool
+	FileMode      os.FileMode
+	FileMtime     time.Time
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -113,6 +120,8 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		Maxlinks:   ihelper.DefaultLinksPerBlock,
 		NoCopy:     adder.NoCopy,
 		CidBuilder: adder.CidBuilder,
+		FileMode:   adder.FileMode,
+		FileMtime:  adder.FileMtime,
 	}
 
 	db, err := params.New(chnk)
@@ -394,6 +403,14 @@ func (adder *Adder) addFile(path string, file files.File) error {
 		} else {
 			reader = rdr
 		}
+	}
+
+	if adder.PreserveMtime {
+		adder.FileMtime = file.ModTime()
+	}
+
+	if adder.PreserveMode {
+		adder.FileMode = file.Mode()
 	}
 
 	dagnode, err := adder.add(reader)

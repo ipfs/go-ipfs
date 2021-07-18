@@ -45,6 +45,12 @@ const (
 	hashOptionName        = "hash"
 	inlineOptionName      = "inline"
 	inlineLimitOptionName = "inline-limit"
+
+	preserveModeOptionName  = "preserve-mode"
+	preserveMtimeOptionName = "preserve-mtime"
+	modeOptionName          = "mode"
+	mtimeOptionName         = "mtime"
+	mtimeNsecsOptionName    = "mtime-nsecs"
 )
 
 const adderOutChanSize = 8
@@ -140,6 +146,11 @@ only-hash, and progress/status related flags) will change the final hash.
 		cmds.StringOption(hashOptionName, "Hash function to use. Implies CIDv1 if not sha2-256. (experimental)").WithDefault("sha2-256"),
 		cmds.BoolOption(inlineOptionName, "Inline small blocks into CIDs. (experimental)"),
 		cmds.IntOption(inlineLimitOptionName, "Maximum block size to inline. (experimental)").WithDefault(32),
+		cmds.BoolOption(preserveModeOptionName, "Apply permissions to created UnixFS entries"),
+		cmds.BoolOption(preserveMtimeOptionName, "Apply modification time to created UnixFS entries"),
+		cmds.UintOption(modeOptionName, "File mode to apply to created UnixFS entries"),
+		cmds.Int64Option(mtimeOptionName, "Modification time in seconds before or after the Unix Epoch to apply to created UnixFS entries"),
+		cmds.UintOption(mtimeNsecsOptionName, "Modification time fraction in nanoseconds"),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -180,6 +191,11 @@ only-hash, and progress/status related flags) will change the final hash.
 		hashFunStr, _ := req.Options[hashOptionName].(string)
 		inline, _ := req.Options[inlineOptionName].(bool)
 		inlineLimit, _ := req.Options[inlineLimitOptionName].(int)
+		preserveMode, _ := req.Options[preserveModeOptionName].(bool)
+		preserveMtime, _ := req.Options[preserveMtimeOptionName].(bool)
+		mode, _ := req.Options[modeOptionName].(uint)
+		mtime, _ := req.Options[mtimeOptionName].(int64)
+		mtimeNsecs, _ := req.Options[mtimeNsecsOptionName].(uint)
 
 		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
 		if !ok {
@@ -213,6 +229,19 @@ only-hash, and progress/status related flags) will change the final hash.
 
 			options.Unixfs.Progress(progress),
 			options.Unixfs.Silent(silent),
+
+			options.Unixfs.PreserveMode(preserveMode),
+			options.Unixfs.PreserveMtime(preserveMtime),
+		}
+
+		if mode != 0 {
+			opts = append(opts, options.Unixfs.Mode(os.FileMode(mode)))
+		}
+
+		if mtime != 0 {
+			opts = append(opts, options.Unixfs.Mtime(mtime, uint32(mtimeNsecs)))
+		} else if mtimeNsecs != 0 {
+			fmt.Printf("option %s ignored as no valid %s value provided\n", mtimeNsecsOptionName, mtimeOptionName)
 		}
 
 		if cidVerSet {

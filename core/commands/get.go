@@ -85,7 +85,7 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 		res.SetLength(uint64(size))
 
 		archive, _ := req.Options[archiveOptionName].(bool)
-		reader, err := fileArchive(file, p.String(), archive, cmplvl)
+		reader, err := fileArchive(file, p.String(), getOutPath(req), archive, cmplvl)
 		if err != nil {
 			return err
 		}
@@ -262,7 +262,22 @@ func (i *identityWriteCloser) Close() error {
 	return nil
 }
 
-func fileArchive(f files.Node, name string, archive bool, compression int) (io.Reader, error) {
+func updateFileMeta(fn files.Node, filename string) error {
+	if t := fn.ModTime(); !t.IsZero() {
+		if err := os.Chtimes(filename, t, t); err != nil {
+			return err
+		}
+	}
+	if mode := fn.Mode(); mode != 0 {
+		if err := os.Chmod(filename, mode); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func fileArchive(f files.Node, name string, outpath string, archive bool, compression int) (io.Reader, error) {
+	var err error = nil
 	cleaned := gopath.Clean(name)
 	_, filename := gopath.Split(cleaned)
 
@@ -285,14 +300,20 @@ func fileArchive(f files.Node, name string, archive bool, compression int) (io.R
 		return nil, err
 	}
 
-	closeGzwAndPipe := func() {
+	closeGzwAndPipe := func() error {
 		if err := maybeGzw.Close(); checkErrAndClosePipe(err) {
-			return
+			return nil
 		}
 		if err := bufw.Flush(); checkErrAndClosePipe(err) {
-			return
+			return nil
 		}
 		pipew.Close() // everything seems to be ok.
+		if !archive {
+			if err := updateFileMeta(f, outpath); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	if !archive && compression != gzip.NoCompression {
@@ -306,7 +327,7 @@ func fileArchive(f files.Node, name string, archive bool, compression int) (io.R
 			if _, err := io.Copy(maybeGzw, r); checkErrAndClosePipe(err) {
 				return
 			}
-			closeGzwAndPipe() // everything seems to be ok
+			err = closeGzwAndPipe() // everything seems to be ok
 		}()
 	} else {
 		// the case for 1. archive, and 2. not archived and not compressed, in which tar is used anyway as a transport format
@@ -322,12 +343,12 @@ func fileArchive(f files.Node, name string, archive bool, compression int) (io.R
 			if err := w.WriteFile(f, filename); checkErrAndClosePipe(err) {
 				return
 			}
-			w.Close()         // close tar writer
-			closeGzwAndPipe() // everything seems to be ok
+			w.Close()               // close tar writer
+			err = closeGzwAndPipe() // everything seems to be ok
 		}()
 	}
 
-	return piper, nil
+	return piper, err
 }
 
 func newMaybeGzWriter(w io.Writer, compression int) (io.WriteCloser, error) {
