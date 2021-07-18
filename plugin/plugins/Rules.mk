@@ -12,7 +12,7 @@ $($(d)_plugins_main):
 
 $($(d)_plugins_so): %.so : %/main/main.go
 $($(d)_plugins_so): $$(DEPS_GO) ALWAYS
-	$(GOCC) build -buildmode=plugin -i -pkgdir "$(GOPATH)/pkg/linux_amd64_dynlink" $(go-flags-with-tags) -o "$@" "$(call go-pkg-name,$(basename $@))/main"
+	$(GOCC) build -buildmode=plugin -pkgdir "$(GOPATH)/pkg/linux_amd64_dynlink" $(go-flags-with-tags) -o "$@" "$(call go-pkg-name,$(basename $@))/main"
 	chmod +x "$@"
 
 CLEAN += $($(d)_plugins_so)

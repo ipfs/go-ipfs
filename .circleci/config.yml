@@ -33,7 +33,7 @@ default_environment: &default_environment
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.15.2
+      - image: cimg/go:1.16.4
     working_directory: ~/ipfs/go-ipfs
     environment:
       <<: *default_environment
@@ -58,7 +58,7 @@ executors:
       E2E_IPFSD_TYPE: go
   dockerizer:
     docker:
-      - image: circleci/golang:1.15.2
+      - image: cimg/go:1.16.4
     environment:
       IMAGE_NAME: ipfs/go-ipfs
       WIP_IMAGE_TAG: wip
@@ -126,6 +126,12 @@ jobs:
         TEST_VERBOSE: 1
     steps:
     - run: sudo apt update
+    - run: |
+        mkdir ~/localgo && cd ~/localgo
+        wget https://golang.org/dl/go1.16.4.linux-amd64.tar.gz
+        tar xfz go1.16.4.linux-amd64.tar.gz
+        echo "export PATH=$(pwd)/go/bin:$PATH" >> $BASH_ENV
+    - run: go version
     - run: sudo apt install socat net-tools
     - checkout
 
@@ -151,7 +157,9 @@ jobs:
     - run:
         echo DOCKER_HOST=$DOCKER_HOST &&
         make -O -j 3 coverage/sharness_tests.coverprofile test/sharness/test-results/sharness.xml TEST_GENERATE_JUNIT=1 CONTINUE_ON_S_FAILURE=1 DOCKER_HOST=$DOCKER_HOST
-
+    - run:
+        when: always
+        command: which ipfs || true
     - run:
         when: always
         command: bash <(curl -s https://codecov.io/bash) -cF sharness -X search -f coverage/sharness_tests.coverprofile

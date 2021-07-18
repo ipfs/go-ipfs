@@ -140,7 +140,7 @@ To build out-of-tree plugins, use the plugin's Makefile if provided. Otherwise,
 you can manually build the plugin by running:
 
 ```bash
-myplugin$ go build -buildmode=plugin -i -o myplugin.so myplugin.go
+myplugin$ go build -buildmode=plugin -o myplugin.so myplugin.go
 ```
 
 Finally, as with in-tree plugins:
