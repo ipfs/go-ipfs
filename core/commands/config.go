@@ -12,6 +12,7 @@ import (
 
 	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
 	"github.com/ipfs/go-ipfs/repo"
+	. "github.com/ipfs/go-ipfs/repo/common"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 
 	"github.com/elgris/jsondiff"
@@ -56,6 +57,11 @@ Get the value of the 'Datastore.Path' key:
 Set the value of the 'Datastore.Path' key:
 
   $ ipfs config Datastore.Path ~/.ipfs/datastore
+
+Values behind map key names that include dots can be accessed like this:
+
+  $ ipfs config Pinning.RemoteServices["pins.example.org"].Policies
+
 `,
 	},
 	Subcommands: map[string]*cmds.Command{
@@ -157,7 +163,8 @@ Set the value of the 'Datastore.Path' key:
 //	matchesGlobPrefix("foo.bar.baz", []string{"*", "bar"}) returns true
 //	matchesGlobPrefix("foo.bar", []string{"baz", "*"}) returns false
 func matchesGlobPrefix(key string, glob []string) bool {
-	k := strings.Split(key, ".")
+	normalizedKey, _ := ConfigKeyToLookupData(key)
+	k := strings.Split(normalizedKey, ".")
 	for i, g := range glob {
 		if i >= len(k) {
 			break
@@ -176,7 +183,13 @@ var configShowCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Output config file contents.",
 		ShortDescription: `
-NOTE: For security reasons, this command will omit your private key and remote services. If you would like to make a full backup of your config (private key included), you must copy the config file from your repo.
+'ipfs config show' returns config contents without private keys and secrets.
+`,
+		LongDescription: `
+NOTE: For security reasons, this command will omit your private key and any
+access tokens for remote services. If you would like to make a full backup of
+your config (private key and secrets included), you must copy the config file
+from your IPFS repository (IPFS_PATH).
 `,
 	},
 	Type: make(map[string]interface{}),

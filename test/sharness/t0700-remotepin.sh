@@ -32,6 +32,7 @@ test_expect_success "test 'ipfs pin remote service ls' JSON on empty list" '
 test_expect_success "creating test user on remote pinning service" '
   echo CI host IP address ${TEST_PIN_SVC} &&
   ipfs pin remote service add test_pin_svc ${TEST_PIN_SVC} ${TEST_PIN_SVC_KEY} &&
+  ipfs pin remote service add test.dots.in.name ${TEST_PIN_SVC} ${TEST_PIN_SVC_KEY} &&
   ipfs pin remote service add test_invalid_key_svc ${TEST_PIN_SVC} fake_api_key &&
   ipfs pin remote service add test_invalid_url_path_svc ${TEST_PIN_SVC}/invalid-path fake_api_key &&
   ipfs pin remote service add test_invalid_url_dns_svc https://invalid-service.example.com fake_api_key &&
@@ -100,6 +101,8 @@ test_expect_success "output does not include API.Key" '
   test_expect_code 1 grep -q Key config_out
 '
 
+# dot notation
+
 test_expect_success "'ipfs config Pinning.RemoteServices.test_pin_svc.API.Key' fails" '
   test_expect_code 1 ipfs config Pinning.RemoteServices.test_pin_svc.API.Key 2> config_out
 '
@@ -115,6 +118,25 @@ test_expect_success "'ipfs config Pinning.RemoteServices.test_pin_svc' fails" '
 test_expect_success "output includes meaningful error" '
   test_cmp config_exp config_out
 '
+
+# json map key notation
+
+test_expect_success "'ipfs config Pinning.RemoteServices[\"test.dots.in.name\"]' fails" '
+  test_expect_code 1 ipfs config Pinning.RemoteServices[\"test.dots.in.name\"] 2> config_out
+'
+test_expect_success "output includes meaningful error" '
+  test_cmp config_exp config_out
+'
+
+test_expect_success "'ipfs config Pinning.RemoteServices[\"test.dots.in.name\"].API.Key' fails" '
+  test_expect_code 1 ipfs config Pinning.RemoteServices[\"test.dots.in.name\"].API.Key 2> config_out
+'
+
+test_expect_success "output includes meaningful error" '
+  test_cmp config_exp config_out
+'
+
+# config show
 
 test_expect_success "'ipfs config show' does not include Pinning.RemoteServices[*].API.Key" '
   ipfs config show | tee show_config | jq -r .Pinning.RemoteServices > remote_services &&
