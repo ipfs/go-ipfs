@@ -93,6 +93,10 @@ RUN mkdir -p $IPFS_PATH \
 RUN mkdir /ipfs /ipns \
   && chown ipfs:users /ipfs /ipns
 
+# Create the init scripts directory
+RUN mkdir /container-init.d \
+  && chown ipfs:users /container-init.d
+
 # Expose the fs-repo as a volume.
 # start_ipfs initializes an fs-repo if none is mounted.
 # Important this happens after the USER directive so permissions are correct.

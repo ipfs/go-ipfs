@@ -51,6 +51,26 @@ else
   # Unset the swarm key file variable
   unset IPFS_SWARM_KEY_FILE
 
+  # Initialization directory
+  IPFS_INIT_SCRIPTS_DIR="/container-init.d"
+
+  # Check if initialization directory exists
+  if [ -d "$IPFS_INIT_SCRIPTS_DIR" ] ; then
+    echo "Configuring IPFS using init scripts..."
+    # Check for any *.sh scripts
+    for script in $(find $IPFS_INIT_SCRIPTS_DIR -type f \( -iname \*.sh \)) ; do
+      # Execute the scripts with +x permission and
+      # source the others
+      if [ -x "$script" ] ; then
+        echo "-Executing '$script'..."
+        $script || exit 1
+      else
+        echo "-Sourcing '$script'..."
+        source $script
+      fi
+    done
+  fi
+
 fi
 
 exec ipfs "$@"
