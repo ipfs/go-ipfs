@@ -1,7 +1,9 @@
 package corehttp
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -21,6 +23,7 @@ import (
 	"github.com/ipfs/go-cid"
 	files "github.com/ipfs/go-ipfs-files"
 	assets "github.com/ipfs/go-ipfs/assets"
+	format "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	mfs "github.com/ipfs/go-mfs"
 	path "github.com/ipfs/go-path"
@@ -265,6 +268,16 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if resolvedPath.Cid().Prefix().Codec == cid.DagCBOR {
+		n, err := i.api.Dag().Get(r.Context(), resolvedPath.Cid())
+		if err != nil {
+			webError(w, "ipfs dag get "+escapedURLPath, err, http.StatusNotFound)
+			return
+		}
+		i.serveCBOR(w, r, n)
+		return
+	}
+
 	dr, err := i.api.Unixfs().Get(r.Context(), resolvedPath)
 	if err != nil {
 		webError(w, "ipfs cat "+escapedURLPath, err, http.StatusNotFound)
@@ -310,18 +323,9 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 			modtime = time.Unix(1, 0)
 		}
 
-		urlFilename := r.URL.Query().Get("filename")
-		var name string
-		if urlFilename != "" {
-			disposition := "inline"
-			if r.URL.Query().Get("download") == "true" {
-				disposition = "attachment"
-			}
-			utf8Name := url.PathEscape(urlFilename)
-			asciiName := url.PathEscape(onlyAscii.ReplaceAllLiteralString(urlFilename, "_"))
-			w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"; filename*=UTF-8''%s", disposition, asciiName, utf8Name))
-			name = urlFilename
-		} else {
+		maybeSetContentDispositionHeader(r.URL.Query(), w.Header())
+		name := r.URL.Query().Get("filename")
+		if name == "" {
 			name = getFilename(urlPath)
 		}
 		i.serveFile(w, r, name, modtime, f)
@@ -522,6 +526,35 @@ func (i *gatewayHandler) serveFile(w http.ResponseWriter, req *http.Request, nam
 
 	w = &statusResponseWriter{w}
 	http.ServeContent(w, req, name, modtime, content)
+}
+
+func (i *gatewayHandler) serveCBOR(w http.ResponseWriter, r *http.Request, n format.Node) {
+	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+	maybeSetContentDispositionHeader(r.URL.Query(), w.Header())
+
+	name := r.URL.Query().Get("filename")
+	if name == "" {
+		name = getFilename(r.URL.Path)
+	}
+	modtime := time.Unix(1, 0)
+
+	var contentType string
+	var data []byte
+	if r.URL.Query().Get("enc") == "json" || r.Header.Get("Content-Type") == "application/json" {
+		contentType = "application/json"
+		b, err := json.Marshal(n)
+		if err != nil {
+			internalWebError(w, err)
+			return
+		}
+		data = b
+	} else {
+		contentType = "application/cbor"
+		data = n.RawData()
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	http.ServeContent(w, r, name, modtime, bytes.NewReader(data))
 }
 
 func (i *gatewayHandler) servePretty404IfPresent(w http.ResponseWriter, r *http.Request, parsedPath ipath.Path) bool {
@@ -838,4 +871,20 @@ func fixupSuperfluousNamespace(w http.ResponseWriter, urlPath string, urlQuery s
 		SuggestedPath: intendedPath.String(),
 		ErrorMsg:      fmt.Sprintf("invalid path: %q should be %q", urlPath, intendedPath.String()),
 	}) == nil
+}
+
+// maybeSetContentDispositionHeader sets the Content-Disposition header if a
+// "filename" was included in the URL querystring.
+func maybeSetContentDispositionHeader(qs url.Values, h http.Header) {
+	urlFilename := qs.Get("filename")
+	if urlFilename == "" {
+		return
+	}
+	disposition := "inline"
+	if qs.Get("download") == "true" {
+		disposition = "attachment"
+	}
+	utf8Name := url.PathEscape(urlFilename)
+	asciiName := url.PathEscape(onlyAscii.ReplaceAllLiteralString(urlFilename, "_"))
+	h.Set("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"; filename*=UTF-8''%s", disposition, asciiName, utf8Name))
 }
