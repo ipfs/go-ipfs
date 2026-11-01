@@ -1,6 +1,6 @@
 module github.com/ipfs/kubo/examples/kubo-as-a-library
 
-go 1.26.5
+go 1.26.6
 
 // Used to keep this in sync with the current version of kubo. You should remove
 // this if you copy this example.
@@ -9,7 +9,7 @@ replace github.com/ipfs/kubo => ./../../..
 require (
 	github.com/ipfs/boxo v0.43.0
 	github.com/ipfs/kubo v0.0.0-00010101000000-000000000000
-	github.com/libp2p/go-libp2p v0.50.0
+	github.com/libp2p/go-libp2p v0.51.0
 	github.com/multiformats/go-multiaddr v0.16.1
 )
 
@@ -116,9 +116,9 @@ require (
 	github.com/libp2p/go-doh-resolver v0.6.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.4.1 // indirect
-	github.com/libp2p/go-libp2p-kad-dht v0.42.2 // indirect
+	github.com/libp2p/go-libp2p-kad-dht v0.43.0 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.9.0 // indirect
-	github.com/libp2p/go-libp2p-pubsub v0.17.0 // indirect
+	github.com/libp2p/go-libp2p-pubsub v0.19.0 // indirect
 	github.com/libp2p/go-libp2p-pubsub-router v0.6.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.3.1 // indirect
 	github.com/libp2p/go-libp2p-routing-helpers v0.7.5 // indirect
@@ -174,7 +174,7 @@ require (
 	github.com/prometheus/common v0.70.1 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/quic-go v0.62.0 // indirect
+	github.com/quic-go/quic-go v0.64.1 // indirect
 	github.com/quic-go/webtransport-go v0.13.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
